@@ -25,9 +25,9 @@ export function EtiquetaPreview({
   const d = conteudoEtiqueta(o, c);
   const txt = { color: m.corTexto, fontSize: f };
 
-  const Linha = ({ rot, val }: { rot: string; val: string }) =>
+  const linha = (rot: string, val: string) =>
     val ? (
-      <Text style={txt} numberOfLines={1}>
+      <Text key={rot} style={txt} numberOfLines={1}>
         <Text style={{ fontWeight: '700', color: m.corDestaque }}>{rot}: </Text>
         {val}
       </Text>
@@ -65,11 +65,11 @@ export function EtiquetaPreview({
             {d.descricao}
           </Text>
         )}
-        {m.mostrar.cliente && <Linha rot="Cliente" val={d.cliente} />}
-        {m.mostrar.telefone && <Linha rot="Tel" val={d.telefone} />}
-        {m.mostrar.datas && <Linha rot="Entrada" val={d.entrada + (d.previsao ? `  ·  Prev.: ${d.previsao}` : '')} />}
-        {m.mostrar.serie && <Linha rot="Série" val={d.serie} />}
-        {m.mostrar.acessorios && <Linha rot="Acess." val={d.acessorios} />}
+        {m.mostrar.cliente && linha('Cliente', d.cliente)}
+        {m.mostrar.telefone && linha('Tel', d.telefone)}
+        {m.mostrar.datas && linha('Entrada', d.entrada + (d.previsao ? `  ·  Prev.: ${d.previsao}` : ''))}
+        {m.mostrar.serie && linha('Série', d.serie)}
+        {m.mostrar.acessorios && linha('Acess.', d.acessorios)}
         {(!!m.rodape || (m.mostrar.contato && !!contato)) && (
           <Text style={[txt, { marginTop: 'auto', textAlign: 'center', fontSize: f * 0.8, opacity: 0.85 }]} numberOfLines={1}>
             {[m.rodape, m.mostrar.contato ? contato : ''].filter(Boolean).join('  ·  ')}

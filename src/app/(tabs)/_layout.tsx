@@ -6,11 +6,10 @@ import { colors } from '../../theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-const icone =
-  (nome: IconName, ativo: IconName) =>
-  ({ color, focused, size }: { color: ColorValue; focused: boolean; size: number }) => (
-    <Ionicons name={focused ? ativo : nome} color={color as string} size={size} />
-  );
+const icone = (nome: IconName, ativo: IconName) =>
+  function IconeAba({ color, focused, size }: { color: ColorValue; focused: boolean; size: number }) {
+    return <Ionicons name={focused ? ativo : nome} color={color as string} size={size} />;
+  };
 
 export default function TabsLayout() {
   const { agendamentos } = useDados();

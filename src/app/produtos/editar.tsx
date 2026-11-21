@@ -63,7 +63,7 @@ export default function EditarProduto() {
     }
   };
 
-  const Toggle = ({ rot, v, on }: { rot: string; v: boolean; on: (b: boolean) => void }) => (
+  const toggle = (rot: string, v: boolean, on: (b: boolean) => void) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
       <Text style={{ color: colors.text, flex: 1 }}>{rot}</Text>
       <Switch value={v} onValueChange={on} trackColor={{ true: colors.primaryDim, false: colors.border }} thumbColor={v ? colors.primary : colors.textMuted} />
@@ -113,8 +113,8 @@ export default function EditarProduto() {
               <Campo label="Avisar abaixo de" value={minimo} onChangeText={setMinimo} keyboardType="number-pad" />
             </View>
           </View>
-          <Toggle rot="Seminovo / usado (garantia 90 dias)" v={usado} on={setUsado} />
-          <Toggle rot="Disponível para venda" v={ativo} on={setAtivo} />
+          {toggle('Seminovo / usado (garantia 90 dias)', usado, setUsado)}
+          {toggle('Disponível para venda', ativo, setAtivo)}
         </Card>
         <Botao label="Salvar produto" icon="checkmark" onPress={salvar} style={{ marginTop: 20 }} />
         {p && adminLiberado && <Botao label="Excluir produto" variante="perigo" icon="trash-outline" onPress={excluir} style={{ marginTop: 10 }} />}

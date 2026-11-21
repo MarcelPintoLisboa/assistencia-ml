@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Badge, Botao, Busca, Fab, Vazio } from '../../components/ui';
+import { Badge, Botao, Busca, Vazio } from '../../components/ui';
 import { CATEGORIA, fmtDataHora, fmtMoeda, mesmoDia, PAGAMENTO } from '../../lib/format';
 import { useDados } from '../../lib/store';
 import { colors, radius } from '../../theme';
@@ -27,6 +27,7 @@ export default function Vendas() {
     <View style={{ flex: 1, paddingTop: insets.top + 12 }}>
       <View style={{ paddingHorizontal: 16 }}>
         <Text style={st.h1}>Vendas</Text>
+        <Botao label="Nova venda" icon="cart" onPress={() => router.push('/venda/nova')} style={{ marginBottom: 10 }} />
         <View style={st.atalhos}>
           <Atalho icon="cube-outline" label="Produtos" sub={baixo ? `${baixo} com estoque baixo` : `${produtos.length} itens`} alerta={baixo > 0} onPress={() => router.push('/produtos')} />
           <Atalho icon={adminLiberado ? 'stats-chart' : 'lock-closed-outline'} label="Indicadores" sub="Somente admin" onPress={() => router.push('/admin')} />
@@ -76,7 +77,6 @@ export default function Vendas() {
           </Vazio>
         }
       />
-      <Fab icon="cart" onPress={() => router.push('/venda/nova')} />
     </View>
   );
 }

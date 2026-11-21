@@ -21,6 +21,7 @@ export async function prepararNotificacoes(): Promise<boolean> {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync(CANAL, {
         name: 'Lembretes e agendamentos',
+        // eslint-disable-next-line import/namespace -- exportado via export * (falso positivo)
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#22D3EE',

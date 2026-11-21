@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { estaAtrasada, OrdemItem } from '../../components/Itens';
@@ -15,11 +15,12 @@ export default function Ordens() {
   const params = useLocalSearchParams<{ filtro?: string }>();
   const { ordens, cliente } = useDados();
   const [busca, setBusca] = useState('');
-  const [filtro, setFiltro] = useState<Filtro>('abertas');
-
-  useEffect(() => {
+  const [filtro, setFiltro] = useState<Filtro>((params.filtro as Filtro) || 'abertas');
+  const [filtroParam, setFiltroParam] = useState(params.filtro);
+  if (params.filtro !== filtroParam) {
+    setFiltroParam(params.filtro);
     if (params.filtro) setFiltro(params.filtro as Filtro);
-  }, [params.filtro]);
+  }
 
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();

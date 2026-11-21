@@ -62,3 +62,13 @@ corresponder ao tipo do provisioning profile.
 
 A versão do arquivo vem de `expo.version` no `app.json`. Para publicar nas lojas,
 aumente também `android.versionCode` / `ios.buildNumber` a cada envio.
+
+## O APK fica em "Instalando…" e não instala
+
+1. **Extraia o APK do .zip** baixado do GitHub (o artefato vem compactado) e abra o arquivo `.apk`.
+2. **Desinstale a versão anterior** do app, se houver uma assinada com outra chave (ex.: build antigo com chave de debug). Android não instala por cima de um app com assinatura diferente.
+3. **Play Protect**: se aparecer o aviso "App bloqueado/não verificado", toque em *Mais detalhes → Instalar mesmo assim*. Se travar em "Instalando…", abra a Play Store → foto do perfil → *Play Protect* → engrenagem e desative temporariamente a verificação, instale e reative.
+4. **Assine com uma chave própria** (secrets `ANDROID_*` acima). APK assinado com a chave de debug pública é tratado com mais desconfiança pelo Play Protect.
+5. **Verificação de desenvolvedor (Brasil)**: o Google passou a exigir, em aparelhos certificados no Brasil, que apps instalados fora da Play Store sejam de desenvolvedores verificados. Se o aparelho bloquear por esse motivo, cadastre-se no Android Developer Console (há opção gratuita para distribuição limitada) ou instale pelo computador com `adb install assistencia-ml.apk`, que não passa por essa verificação.
+
+O `versionCode` é o número da execução do workflow, então cada APK novo instala por cima do anterior (desde que assinado com a mesma chave).

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { diasEntre, fmtData, fmtHora, PRIORIDADE, STATUS, TIPO_AG } from '../lib/format';
 import type { Agendamento, Cliente, OrdemServico } from '../lib/types';
@@ -78,7 +78,8 @@ export function AgendamentoItem({
   mostrarData?: boolean;
 }) {
   const tipo = TIPO_AG[a.tipo];
-  const passou = !a.concluido && new Date(a.data).getTime() < Date.now();
+  const [agora] = useState(() => Date.now());
+  const passou = !a.concluido && new Date(a.data).getTime() < agora;
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/agendamento/novo', params: { id: a.id } })}

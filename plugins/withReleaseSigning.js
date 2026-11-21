@@ -33,6 +33,9 @@ module.exports = function withReleaseSigning(config) {
       `$1signingConfig System.getenv("ANDROID_KEYSTORE_PATH") ? signingConfigs.release : signingConfigs.debug`,
     );
 
+    // versionCode vindo do CI (número da execução) para cada APK novo instalar por cima do anterior
+    g = g.replace(/versionCode\s+(\d+)/, 'versionCode((System.getenv("ANDROID_VERSION_CODE") ?: "$1").toInteger())');
+
     cfg.modResults.contents = g;
     return cfg;
   });
