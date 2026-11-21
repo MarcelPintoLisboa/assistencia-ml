@@ -16,6 +16,8 @@ export interface Cliente {
   telefone: string;
   email: string;
   endereco: string;
+  /** CPF / CNPJ / RG */
+  documento?: string;
   notas: string;
   criadoEm: string;
 }
@@ -40,8 +42,13 @@ export interface OrdemServico {
   marca: string;
   modelo: string;
   numeroSerie: string;
+  cor?: string;
+  tecnico?: string;
+  itensOrcamento?: ItemOrcamento[];
   acessorios: string;
   defeito: string;
+  /** Defeitos marcados rapidamente (aparecem na etiqueta). */
+  defeitos?: string[];
   diagnostico: string;
   status: StatusOS;
   prioridade: Prioridade;
@@ -71,9 +78,105 @@ export interface Agendamento {
   notificationId?: string | null;
 }
 
+
+export type CategoriaProduto = 'drone' | 'videogame' | 'controle' | 'jogo' | 'acessorio' | 'peca';
+
+export interface Produto {
+  id: string;
+  nome: string;
+  categoria: CategoriaProduto;
+  marca: string;
+  sku: string;
+  custo: number;
+  preco: number;
+  estoque: number;
+  estoqueMinimo: number;
+  /** Item usado/seminovo */
+  usado: boolean;
+  ativo: boolean;
+  criadoEm: string;
+}
+
+export interface ItemVenda {
+  produtoId: string;
+  nome: string;
+  categoria: CategoriaProduto;
+  qtd: number;
+  precoUnit: number;
+  custoUnit: number;
+}
+
+export type FormaPagamento = 'pix' | 'dinheiro' | 'debito' | 'credito' | 'parcelado';
+
+export interface Venda {
+  id: string;
+  numero: number;
+  data: string;
+  clienteId: string | null;
+  itens: ItemVenda[];
+  desconto: number;
+  total: number;
+  pagamento: FormaPagamento;
+  parcelas: number;
+  garantiaDias: number;
+  observacoes: string;
+  status: 'concluida' | 'cancelada';
+}
+
+export type TamanhoEtiqueta = '50x30' | '60x40' | '80x50' | '100x50' | '100x150';
+
+export interface ModeloEtiqueta {
+  id: string;
+  nome: string;
+  tamanho: TamanhoEtiqueta;
+  corDestaque: string;
+  corTexto: string;
+  corFundo: string;
+  /** data URI (base64) */
+  logo: string | null;
+  fundo: string | null;
+  opacidadeFundo: number;
+  titulo: string;
+  rodape: string;
+  mostrar: {
+    cliente: boolean;
+    telefone: boolean;
+    datas: boolean;
+    serie: boolean;
+    acessorios: boolean;
+    descricao: boolean;
+    contato: boolean;
+  };
+}
+
 export interface AppData {
   clientes: Cliente[];
   ordens: OrdemServico[];
   agendamentos: Agendamento[];
+  produtos: Produto[];
+  vendas: Venda[];
   proximoNumero: number;
+  proximaVenda: number;
+}
+
+export interface ItemOrcamento {
+  id: string;
+  descricao: string;
+  qtd: number;
+  valor: number;
+}
+
+export interface DadosLoja {
+  nome: string;
+  slogan: string;
+  endereco: string;
+  telefone: string;
+  email: string;
+  instagram: string;
+  documento: string;
+  logo: string | null;
+  /** Logo em marca d'água no fundo das fichas */
+  marcaDagua: boolean;
+  obsOrcamento: string;
+  termoVenda: string;
 }

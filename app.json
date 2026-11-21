@@ -46,7 +46,16 @@
           "color": "#22D3EE"
         }
       ],
-      "./plugins/withReleaseSigning"
+      "./plugins/withReleaseSigning",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O app usa suas fotos para personalizar etiquetas e a logo das fichas.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

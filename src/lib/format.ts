@@ -109,3 +109,30 @@ export const exemplosEquipamento = (tipo: string) =>
   ehDrone(tipo)
     ? { marca: 'Ex.: DJI', modelo: 'Ex.: Mini 4 Pro', acessorios: 'Baterias, controle, hélices, case…' }
     : { marca: 'Ex.: Sony', modelo: 'Ex.: PS5', acessorios: 'Controles, cabos, fonte…' };
+
+/** Defeitos mais comuns, para marcar com um toque (vão para a etiqueta). */
+export const defeitosSugeridos = (tipo: string) =>
+  ehDrone(tipo)
+    ? ['Não liga', 'Queda / impacto', 'Contato com água', 'Motor travado', 'Hélice quebrada', 'Gimbal com erro',
+       'Câmera sem imagem', 'Perda de sinal', 'Erro de IMU / bússola', 'Bateria estufada', 'Não carrega',
+       'Braço quebrado', 'Carcaça danificada', 'Erro de firmware']
+    : ['Não liga', 'Superaquecendo', 'Sem imagem / HDMI', 'Não lê disco', 'Drift no analógico', 'Botão falhando',
+       'Não carrega', 'Ventoinha barulhenta', 'Erro de sistema', 'HD / SSD com falha', 'Sem som',
+       'Wi-Fi / Bluetooth falhando', 'Carcaça danificada', 'Luz azul / tela preta'];
+
+export const CATEGORIA: Record<import('./types').CategoriaProduto, { label: string; icon: IconName }> = {
+  drone: { label: 'Drones', icon: 'airplane-outline' },
+  videogame: { label: 'Video games', icon: 'game-controller-outline' },
+  controle: { label: 'Controles', icon: 'radio-outline' },
+  jogo: { label: 'Jogos', icon: 'disc-outline' },
+  acessorio: { label: 'Acessórios', icon: 'headset-outline' },
+  peca: { label: 'Peças', icon: 'hardware-chip-outline' },
+};
+
+export const PAGAMENTO: Record<import('./types').FormaPagamento, string> = {
+  pix: 'Pix',
+  dinheiro: 'Dinheiro',
+  debito: 'Débito',
+  credito: 'Crédito à vista',
+  parcelado: 'Crédito parcelado',
+};

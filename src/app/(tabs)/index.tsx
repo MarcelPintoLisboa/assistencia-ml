@@ -147,6 +147,7 @@ export default function Painel() {
             {/* Ações rápidas */}
             <View style={st.acoes}>
               <Acao icon="add-circle" label="Nova OS" onPress={() => router.push('/ordem/nova')} />
+              <Acao icon="cart" label="Venda" onPress={() => router.push('/venda/nova')} />
               <Acao icon="calendar" label="Agendar" onPress={() => router.push('/agendamento/novo')} />
               <Acao icon="person-add" label="Cliente" onPress={() => router.push('/cliente/novo')} />
             </View>

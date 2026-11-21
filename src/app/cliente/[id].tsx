@@ -52,6 +52,7 @@ export default function DetalheCliente() {
         <Card>
           <Linha icon="call-outline" label="Telefone" valor={c.telefone} />
           <Linha icon="mail-outline" label="E-mail" valor={c.email} />
+          <Linha icon="card-outline" label="CPF / RG" valor={c.documento ?? ''} />
           <Linha icon="location-outline" label="Endereço" valor={c.endereco} />
           <Linha icon="document-text-outline" label="Observações" valor={c.notas} />
           <Linha icon="calendar-outline" label="Cliente desde" valor={fmtData(c.criadoEm)} />

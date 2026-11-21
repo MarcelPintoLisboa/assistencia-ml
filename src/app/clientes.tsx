@@ -2,13 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Botao, Busca, Fab, Vazio } from '../../components/ui';
-import { useDados } from '../../lib/store';
-import { colors, radius } from '../../theme';
+import { Botao, Busca, Fab, Vazio } from '../components/ui';
+import { useDados } from '../lib/store';
+import { colors, radius } from '../theme';
 
 export default function Clientes() {
-  const insets = useSafeAreaInsets();
   const { clientes, ordens } = useDados();
   const [busca, setBusca] = useState('');
 
@@ -20,9 +18,8 @@ export default function Clientes() {
   }, [clientes, busca]);
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top + 12 }}>
+    <View style={{ flex: 1, paddingTop: 12 }}>
       <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-        <Text style={st.h1}>Clientes</Text>
         <Busca value={busca} onChangeText={setBusca} placeholder="Buscar por nome, telefone ou e-mail" />
       </View>
       <FlatList

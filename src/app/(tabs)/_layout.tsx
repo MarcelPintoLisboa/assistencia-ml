@@ -30,6 +30,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Painel', tabBarIcon: icone('speedometer-outline', 'speedometer') }} />
       <Tabs.Screen name="ordens" options={{ title: 'Ordens', tabBarIcon: icone('construct-outline', 'construct') }} />
+      <Tabs.Screen name="vendas" options={{ title: 'Vendas', tabBarIcon: icone('cart-outline', 'cart') }} />
       <Tabs.Screen
         name="agenda"
         options={{
@@ -39,7 +40,6 @@ export default function TabsLayout() {
           tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.bg, fontWeight: '800' },
         }}
       />
-      <Tabs.Screen name="clientes" options={{ title: 'Clientes', tabBarIcon: icone('people-outline', 'people') }} />
       <Tabs.Screen name="ajustes" options={{ title: 'Menu', tabBarIcon: icone('menu-outline', 'menu') }} />
     </Tabs>
   );

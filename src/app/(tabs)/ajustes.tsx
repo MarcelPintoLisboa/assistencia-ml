@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -58,6 +59,15 @@ export default function Ajustes() {
         <ItemContato icon="mail" cor="#60A5FA" titulo="E-mail" valor={CONTATO.email} url={LINKS.email} borda />
       </Card>
 
+      <Titulo>Gestão</Titulo>
+      <Card style={{ paddingVertical: 4 }}>
+        <ItemMenu icon="people-outline" titulo="Clientes" desc={`${clientes.length} cadastrados`} onPress={() => router.push('/clientes')} />
+        <ItemMenu icon="cube-outline" titulo="Produtos e estoque" desc="Drones, video games, acessórios" onPress={() => router.push('/produtos')} borda />
+        <ItemMenu icon="stats-chart-outline" titulo="Indicadores de vendas" desc="Somente administrador (PIN)" onPress={() => router.push('/admin')} borda />
+        <ItemMenu icon="pricetags-outline" titulo="Modelos de etiqueta" desc="Logo, imagem de fundo, cores e tamanho" onPress={() => router.push('/etiquetas')} borda />
+        <ItemMenu icon="document-text-outline" titulo="Dados da loja e fichas" desc="Cabeçalho, logo, termo de venda" onPress={() => router.push('/loja')} borda />
+      </Card>
+
       <Titulo>Seus dados</Titulo>
       <Card style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
         <Num n={ordens.length} label="Ordens" />
@@ -106,6 +116,21 @@ export default function Ajustes() {
         Versão {Constants.expoConfig?.version ?? '1.0.0'}
       </Text>
     </ScrollView>
+  );
+}
+
+function ItemMenu({ icon, titulo, desc, onPress, borda }: { icon: keyof typeof Ionicons.glyphMap; titulo: string; desc: string; onPress: () => void; borda?: boolean }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [st.contato, borda && st.contatoBorda, pressed && { opacity: 0.7 }]}>
+      <View style={[st.contatoIcone, { backgroundColor: colors.primary + '18' }]}>
+        <Ionicons name={icon} size={20} color={colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{titulo}</Text>
+        <Text style={{ color: colors.textSec, fontSize: 12 }}>{desc}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+    </Pressable>
   );
 }
 

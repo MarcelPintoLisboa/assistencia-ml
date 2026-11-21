@@ -12,6 +12,7 @@ export default function NovoCliente() {
   const [telefone, setTelefone] = useState(atual?.telefone ?? '');
   const [email, setEmail] = useState(atual?.email ?? '');
   const [endereco, setEndereco] = useState(atual?.endereco ?? '');
+  const [documento, setDocumento] = useState(atual?.documento ?? '');
   const [notas, setNotas] = useState(atual?.notas ?? '');
 
   const salvar = async () => {
@@ -20,7 +21,7 @@ export default function NovoCliente() {
       else Alert.alert('Atenção', 'Informe o nome do cliente.');
       return;
     }
-    await salvarCliente({ id: atual?.id, nome: nome.trim(), telefone: telefone.trim(), email: email.trim(), endereco: endereco.trim(), notas: notas.trim() });
+    await salvarCliente({ id: atual?.id, nome: nome.trim(), telefone: telefone.trim(), email: email.trim(), endereco: endereco.trim(), documento: documento.trim(), notas: notas.trim() });
     router.back();
   };
 
@@ -32,6 +33,7 @@ export default function NovoCliente() {
           <Campo label="Nome *" value={nome} onChangeText={setNome} placeholder="Nome completo" autoFocus={!atual} />
           <Campo label="Telefone / WhatsApp" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="(00) 00000-0000" />
           <Campo label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <Campo label="CPF / CNPJ / RG" value={documento} onChangeText={setDocumento} keyboardType="numbers-and-punctuation" placeholder="Sai nas fichas e no orçamento" />
           <Campo label="Endereço" value={endereco} onChangeText={setEndereco} placeholder="Para visitas técnicas" />
           <Campo label="Observações" value={notas} onChangeText={setNotas} multiline />
         </Card>

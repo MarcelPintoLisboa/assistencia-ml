@@ -5,10 +5,10 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { CampoData } from '../../components/CampoData';
 import { Botao, Campo, Card, Chips, Rotulo, s as ui, Titulo } from '../../components/ui';
 import {
-  exemplosEquipamento, fmtMoeda, parseMoeda, PRIORIDADE, procedimentosSugeridos, STATUS, STATUS_ORDEM, TIPOS_EQUIPAMENTO, uid,
+  defeitosSugeridos, exemplosEquipamento, fmtMoeda, parseMoeda, PRIORIDADE, procedimentosSugeridos, STATUS, STATUS_ORDEM, TIPOS_EQUIPAMENTO, uid,
 } from '../../lib/format';
 import { useDados } from '../../lib/store';
-import type { Prioridade, Procedimento, StatusOS } from '../../lib/types';
+import type { ItemOrcamento, Prioridade, Procedimento, StatusOS } from '../../lib/types';
 import { colors, radius } from '../../theme';
 
 export default function NovaOrdem() {
@@ -29,6 +29,23 @@ export default function NovaOrdem() {
   const [serie, setSerie] = useState(atual?.numeroSerie ?? '');
   const [acessorios, setAcessorios] = useState(atual?.acessorios ?? '');
   const [defeito, setDefeito] = useState(atual?.defeito ?? '');
+  const [defeitos, setDefeitos] = useState<string[]>(atual?.defeitos ?? []);
+  const [novoDefeito, setNovoDefeito] = useState('');
+  const [cor, setCor] = useState(atual?.cor ?? '');
+  const [tecnico, setTecnico] = useState(atual?.tecnico ?? '');
+  const [itens, setItens] = useState<ItemOrcamento[]>(atual?.itensOrcamento ?? []);
+  const [itemDesc, setItemDesc] = useState('');
+  const [itemValor, setItemValor] = useState('');
+  const totalItens = itens.reduce((t, i) => t + i.qtd * i.valor, 0);
+
+  const alternarDefeito = (d: string) =>
+    setDefeitos((l) => (l.includes(d) ? l.filter((x) => x !== d) : [...l, d]));
+  const addItem = () => {
+    if (!itemDesc.trim()) return;
+    setItens((l) => [...l, { id: uid(), descricao: itemDesc.trim(), qtd: 1, valor: parseMoeda(itemValor) }]);
+    setItemDesc('');
+    setItemValor('');
+  };
   const [diagnostico, setDiagnostico] = useState(atual?.diagnostico ?? '');
   const [status, setStatus] = useState<StatusOS>(atual?.status ?? 'recebido');
   const [prioridade, setPrioridade] = useState<Prioridade>(atual?.prioridade ?? 'normal');
@@ -60,7 +77,7 @@ export default function NovaOrdem() {
     }
     if (!cid) return erro('Selecione o cliente.');
     if (!marca.trim() && !modelo.trim()) return erro('Informe a marca ou o modelo do equipamento.');
-    if (!defeito.trim()) return erro('Descreva o defeito relatado.');
+    if (!defeito.trim() && !defeitos.length) return erro('Marque ou descreva o defeito.');
     const o = await salvarOrdem({
       id: atual?.id,
       clienteId: cid,
@@ -70,10 +87,14 @@ export default function NovaOrdem() {
       numeroSerie: serie.trim(),
       acessorios: acessorios.trim(),
       defeito: defeito.trim(),
+      defeitos,
+      cor: cor.trim(),
+      tecnico: tecnico.trim(),
+      itensOrcamento: itens,
       diagnostico: diagnostico.trim(),
       status,
       prioridade,
-      valorOrcamento: parseMoeda(orcamento),
+      valorOrcamento: itens.length ? totalItens : parseMoeda(orcamento),
       valorFinal: parseMoeda(valorFinal),
       dataEntrada: entrada ?? new Date().toISOString(),
       previsaoEntrega: previsao,
@@ -82,7 +103,7 @@ export default function NovaOrdem() {
       procedimentos: procs,
     });
     if (atual) router.back();
-    else router.replace({ pathname: '/ordem/[id]', params: { id: o.id } });
+    else router.replace({ pathname: '/ordem/[id]', params: { id: o.id, nova: '1' } });
   };
 
   const clientesFiltrados = clientes
@@ -145,9 +166,40 @@ export default function NovaOrdem() {
               <Campo label="Modelo" value={modelo} onChangeText={setModelo} placeholder={ex.modelo} />
             </View>
           </View>
-          <Campo label="Nº de série" value={serie} onChangeText={setSerie} autoCapitalize="characters" />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1.4 }}>
+              <Campo label="Nº de série" value={serie} onChangeText={setSerie} autoCapitalize="characters" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Campo label="Cor" value={cor} onChangeText={setCor} placeholder="Branco, preto…" />
+            </View>
+          </View>
           <Campo label="Acessórios deixados" value={acessorios} onChangeText={setAcessorios} placeholder={ex.acessorios} />
-          <Campo label="Defeito relatado *" value={defeito} onChangeText={setDefeito} multiline placeholder="O que o cliente relatou" />
+          <Rotulo>Defeitos (toque para marcar — saem na etiqueta)</Rotulo>
+          <View style={ui.chips}>
+            {[...defeitosSugeridos(tipo), ...defeitos.filter((d) => !defeitosSugeridos(tipo).includes(d))].map((d) => {
+              const on = defeitos.includes(d);
+              return (
+                <Pressable key={d} onPress={() => alternarDefeito(d)} style={[ui.chip, on && { borderColor: colors.critical, backgroundColor: colors.critical + '22' }]}>
+                  <Text style={[ui.chipTxt, on && { color: colors.text }]}>{on ? '✓ ' : ''}{d}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+            <TextInput
+              value={novoDefeito}
+              onChangeText={setNovoDefeito}
+              placeholder="Outro defeito…"
+              placeholderTextColor={colors.textMuted}
+              style={[ui.input, { flex: 1 }]}
+              onSubmitEditing={() => { if (novoDefeito.trim()) { alternarDefeito(novoDefeito.trim()); setNovoDefeito(''); } }}
+            />
+            <Pressable style={st.addBtn} onPress={() => { if (novoDefeito.trim()) { alternarDefeito(novoDefeito.trim()); setNovoDefeito(''); } }}>
+              <Ionicons name="add" size={22} color={colors.bg} />
+            </Pressable>
+          </View>
+          <Campo label="Relato do cliente / estado do aparelho" value={defeito} onChangeText={setDefeito} multiline placeholder="O que o cliente relatou, riscos, marcas de uso…" />
           <Campo label="Diagnóstico técnico" value={diagnostico} onChangeText={setDiagnostico} multiline placeholder="Preenchido após avaliação" />
         </Card>
 
@@ -165,6 +217,7 @@ export default function NovaOrdem() {
             valor={prioridade}
             onChange={setPrioridade}
           />
+          <Campo label="Técnico responsável" value={tecnico} onChangeText={setTecnico} placeholder="Nome do técnico" />
           <CampoData label="Data de entrada" valor={entrada} onChange={setEntrada} />
           <CampoData label="Previsão de entrega (gera lembrete)" valor={previsao} onChange={setPrevisao} opcional />
           <Rotulo>Garantia</Rotulo>
@@ -175,11 +228,32 @@ export default function NovaOrdem() {
           />
         </Card>
 
-        <Titulo>Valores</Titulo>
+        <Titulo>Orçamento</Titulo>
         <Card>
+          {itens.map((i) => (
+            <View key={i.id} style={st.proc}>
+              <Text style={{ color: colors.text, flex: 1 }}>{i.descricao}</Text>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>{fmtMoeda(i.valor)}</Text>
+              <Pressable hitSlop={10} onPress={() => setItens((l) => l.filter((x) => x.id !== i.id))}>
+                <Ionicons name="trash-outline" size={18} color={colors.critical} />
+              </Pressable>
+            </View>
+          ))}
+          <View style={{ flexDirection: 'row', gap: 8, marginVertical: 10 }}>
+            <TextInput value={itemDesc} onChangeText={setItemDesc} placeholder="Serviço / peça" placeholderTextColor={colors.textMuted} style={[ui.input, { flex: 2 }]} />
+            <TextInput value={itemValor} onChangeText={setItemValor} placeholder="R$" keyboardType="decimal-pad" placeholderTextColor={colors.textMuted} style={[ui.input, { flex: 1 }]} onSubmitEditing={addItem} />
+            <Pressable style={st.addBtn} onPress={addItem}>
+              <Ionicons name="add" size={22} color={colors.bg} />
+            </Pressable>
+          </View>
+          {itens.length > 0 && (
+            <Text style={{ color: colors.textSec, marginBottom: 10 }}>
+              Total dos itens: <Text style={{ color: colors.text, fontWeight: '800' }}>{fmtMoeda(totalItens)}</Text>
+            </Text>
+          )}
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Campo label="Orçamento (R$)" value={orcamento} onChangeText={setOrcamento} keyboardType="decimal-pad" placeholder="0,00" />
+              <Campo label={itens.length ? 'Orçamento (soma dos itens)' : 'Orçamento (R$)'} editable={!itens.length} value={itens.length ? fmtMoeda(totalItens).replace('R$ ', '') : orcamento} onChangeText={setOrcamento} keyboardType="decimal-pad" placeholder="0,00" />
             </View>
             <View style={{ flex: 1 }}>
               <Campo label="Valor final (R$)" value={valorFinal} onChangeText={setValorFinal} keyboardType="decimal-pad" placeholder="0,00" />

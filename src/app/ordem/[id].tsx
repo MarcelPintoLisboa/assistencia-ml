@@ -2,7 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ListaDocumentos, type Doc } from '../../components/Documentos';
 import { AgendamentoItem, estaAtrasada } from '../../components/Itens';
+import { htmlEnvioAssistencia, htmlFichaEntrada, htmlFichaSaidaOS, htmlOrcamento } from '../../lib/documentos';
 import { Badge, Botao, Card, Linha, Titulo, toque, Vazio } from '../../components/ui';
 import { diasEntre, fmtData, fmtDataHora, fmtMoeda, PRIORIDADE, STATUS, STATUS_ORDEM } from '../../lib/format';
 import { useDados } from '../../lib/store';
@@ -12,8 +14,8 @@ import { colors, radius } from '../../theme';
 const FLUXO: StatusOS[] = ['recebido', 'diagnostico', 'aguardando_aprovacao', 'aguardando_peca', 'em_reparo', 'pronto', 'entregue'];
 
 export default function DetalheOrdem() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { ordens, agendamentos, cliente, alterarStatus, alternarProcedimento, removerOrdem, alternarAgendamento } = useDados();
+  const { id, nova } = useLocalSearchParams<{ id: string; nova?: string }>();
+  const { loja, ordens, agendamentos, cliente, alterarStatus, alternarProcedimento, removerOrdem, alternarAgendamento } = useDados();
   const o = ordens.find((x) => x.id === id);
 
   if (!o) {
@@ -28,6 +30,14 @@ export default function DetalheOrdem() {
   const proximo = idx >= 0 && idx < FLUXO.length - 1 ? FLUXO[idx + 1] : null;
   const ags = agendamentos.filter((a) => a.ordemId === o.id).sort((a, b) => a.data.localeCompare(b.data));
   const fimGarantia = o.dataSaida && o.garantiaDias ? new Date(new Date(o.dataSaida).getTime() + o.garantiaDias * 86400000) : null;
+
+  const entregue = o.status === 'entregue';
+  const docs: Doc[] = [
+    { titulo: 'Ficha técnica de entrada', descricao: 'Recebimento do aparelho (1ª via arquivo, 2ª loja)', icon: 'log-in-outline', cor: colors.primary, html: () => htmlFichaEntrada(o, c, loja), destaque: !entregue },
+    { titulo: 'Orçamento do cliente', descricao: 'Serviços, valores e assinaturas', icon: 'pricetag-outline', cor: colors.warning, html: () => htmlOrcamento(o, c, loja) },
+    { titulo: 'Ficha de envio p/ assistência', descricao: 'Checklist de defeitos para a bancada', icon: 'construct-outline', cor: colors.critical, html: () => htmlEnvioAssistencia(o, c, loja) },
+    { titulo: 'Ficha técnica de saída', descricao: 'Entrega ao cliente, garantia e termo', icon: 'log-out-outline', cor: colors.good, html: () => htmlFichaSaidaOS(o, c, loja), destaque: entregue },
+  ];
 
   const mudar = (s: StatusOS) => {
     toque();
@@ -78,6 +88,15 @@ export default function DetalheOrdem() {
         }}
       />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {nova === '1' && (
+          <View style={s.nova}>
+            <Ionicons name="checkmark-circle" size={22} color={colors.good} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontWeight: '800' }}>Entrada registrada!</Text>
+              <Text style={{ color: colors.textSec, fontSize: 13 }}>Gere agora a ficha de entrada e a etiqueta do aparelho.</Text>
+            </View>
+          </View>
+        )}
         <Card style={{ borderColor: st.color + '80' }}>
           <View style={s.topo}>
             <Pressable onPress={escolherStatus}>
@@ -86,7 +105,14 @@ export default function DetalheOrdem() {
             <Badge label={`Prioridade ${PRIORIDADE[o.prioridade].label.toLowerCase()}`} color={PRIORIDADE[o.prioridade].color} icon="flag" />
           </View>
           <Text style={s.equip}>{o.tipoEquipamento} · {o.marca} {o.modelo}</Text>
-          <Text style={s.defeito}>{o.defeito}</Text>
+          {(o.defeitos ?? []).length > 0 && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              {(o.defeitos ?? []).map((d) => (
+                <Badge key={d} label={d} color={colors.critical} icon="warning-outline" />
+              ))}
+            </View>
+          )}
+          {!!o.defeito && <Text style={s.defeito}>{o.defeito}</Text>}
           {atrasada && (
             <View style={s.alerta}>
               <Ionicons name="alert-circle" size={16} color={colors.critical} />
@@ -119,6 +145,15 @@ export default function DetalheOrdem() {
             ))}
           </View>
         )}
+
+        <Titulo>Documentos e etiqueta</Titulo>
+        <Botao
+          label="Imprimir etiqueta do aparelho"
+          icon="pricetags-outline"
+          onPress={() => router.push({ pathname: '/etiqueta/[id]', params: { id: o.id } })}
+          style={{ marginBottom: 10 }}
+        />
+        <ListaDocumentos docs={docs} />
 
         <Titulo>Procedimentos {o.procedimentos.length > 0 && `(${feitos}/${o.procedimentos.length})`}</Titulo>
         <Card style={{ paddingVertical: 6 }}>
@@ -165,6 +200,8 @@ export default function DetalheOrdem() {
         <Titulo>Detalhes</Titulo>
         <Card>
           <Linha icon="barcode-outline" label="Nº série" valor={o.numeroSerie} />
+          <Linha icon="color-palette-outline" label="Cor" valor={o.cor ?? ''} />
+          <Linha icon="person-circle-outline" label="Técnico" valor={o.tecnico ?? ''} />
           <Linha icon="bag-outline" label="Acessórios" valor={o.acessorios} />
           <Linha icon="medkit-outline" label="Diagnóstico" valor={o.diagnostico} />
           <Linha icon="log-in-outline" label="Entrada" valor={fmtDataHora(o.dataEntrada)} />
@@ -225,5 +262,16 @@ const s = StyleSheet.create({
   progressoBarra: { height: 6, backgroundColor: colors.good, borderRadius: 3 },
   proc: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   hist: { flexDirection: 'row', gap: 12, paddingVertical: 8 },
+  nova: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: radius.md,
+    backgroundColor: colors.good + '18',
+    borderWidth: 1,
+    borderColor: colors.good + '66',
+  },
   histPonto: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
 });

@@ -3,10 +3,18 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { gerarExemplo } from './exemplo';
 import { fmtHora, STATUS, TIPO_AG, uid } from './format';
 import { agendarAviso, cancelarAviso } from './notifications';
-import type { Agendamento, AppData, Cliente, OrdemServico, StatusOS } from './types';
+import { LOJA_PADRAO } from './documentos';
+import { modeloPadrao } from './etiqueta';
+import type { Agendamento, AppData, Cliente, DadosLoja, ModeloEtiqueta, OrdemServico, Produto, StatusOS, Venda } from './types';
 
 const CHAVE = '@assistencia-ml/dados-v1';
-const VAZIO: AppData = { clientes: [], ordens: [], agendamentos: [], proximoNumero: 1 };
+// Modelos de etiqueta (com imagens) e PIN ficam em chaves separadas para não pesar os dados principais.
+const CHAVE_MODELOS = '@assistencia-ml/etiquetas-v1';
+const CHAVE_PIN = '@assistencia-ml/admin-pin';
+const CHAVE_LOJA = '@assistencia-ml/loja-v1';
+const VAZIO: AppData = {
+  clientes: [], ordens: [], agendamentos: [], produtos: [], vendas: [], proximoNumero: 1, proximaVenda: 1,
+};
 
 const STATUS_FECHADOS: StatusOS[] = ['pronto', 'entregue', 'cancelado'];
 
@@ -53,6 +61,24 @@ interface Ctx extends AppData {
   carregarExemplo: () => Promise<void>;
   apagarTudo: () => Promise<void>;
   cliente: (id: string | null | undefined) => Cliente | undefined;
+  // Vendas / estoque
+  salvarProduto: (p: Omit<Produto, 'id' | 'criadoEm'> & { id?: string }) => Promise<Produto>;
+  removerProduto: (id: string) => Promise<void>;
+  registrarVenda: (v: Omit<Venda, 'id' | 'numero' | 'status'>) => Promise<Venda>;
+  cancelarVenda: (id: string) => Promise<void>;
+  // Etiquetas
+  modelos: ModeloEtiqueta[];
+  salvarModelo: (m: ModeloEtiqueta) => Promise<void>;
+  removerModelo: (id: string) => Promise<void>;
+  // Loja (cabeçalho das fichas)
+  loja: DadosLoja;
+  salvarLoja: (l: DadosLoja) => Promise<void>;
+  // Administrador
+  temPin: boolean;
+  adminLiberado: boolean;
+  definirPin: (pin: string) => Promise<void>;
+  liberarAdmin: (pin: string) => boolean;
+  bloquearAdmin: () => void;
 }
 
 const DataContext = createContext<Ctx | null>(null);
@@ -61,19 +87,66 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [dados, setDados] = useState<AppData>(VAZIO);
   const [carregado, setCarregado] = useState(false);
   const ref = useRef(dados);
+  const [modelos, setModelos] = useState<ModeloEtiqueta[]>([modeloPadrao()]);
+  const modelosRef = useRef(modelos);
+  const [pin, setPin] = useState<string | null>(null);
+  const [adminLiberado, setAdminLiberado] = useState(false);
+  const [loja, setLoja] = useState<DadosLoja>(LOJA_PADRAO);
 
   useEffect(() => {
-    AsyncStorage.getItem(CHAVE)
-      .then((txt) => {
+    Promise.all([AsyncStorage.getItem(CHAVE), AsyncStorage.getItem(CHAVE_MODELOS), AsyncStorage.getItem(CHAVE_PIN), AsyncStorage.getItem(CHAVE_LOJA)])
+      .then(([txt, txtModelos, txtPin, txtLoja]) => {
+        if (txtLoja) setLoja({ ...LOJA_PADRAO, ...JSON.parse(txtLoja) });
         if (txt) {
           const d = { ...VAZIO, ...JSON.parse(txt) } as AppData;
           ref.current = d;
           setDados(d);
         }
+        if (txtModelos) {
+          const m = JSON.parse(txtModelos) as ModeloEtiqueta[];
+          if (m.length) {
+            modelosRef.current = m;
+            setModelos(m);
+          }
+        }
+        if (txtPin) setPin(txtPin);
       })
       .catch(() => {})
       .finally(() => setCarregado(true));
   }, []);
+
+  const gravarModelos = (lista: ModeloEtiqueta[]) => {
+    modelosRef.current = lista;
+    setModelos(lista);
+    AsyncStorage.setItem(CHAVE_MODELOS, JSON.stringify(lista)).catch(() => {});
+  };
+
+  const salvarModelo = async (m: ModeloEtiqueta) => {
+    const l = modelosRef.current;
+    gravarModelos(l.some((x) => x.id === m.id) ? l.map((x) => (x.id === m.id ? m : x)) : [...l, m]);
+  };
+
+  const removerModelo = async (id: string) => {
+    const l = modelosRef.current.filter((x) => x.id !== id);
+    gravarModelos(l.length ? l : [modeloPadrao()]);
+  };
+
+  const salvarLoja = async (l: DadosLoja) => {
+    setLoja(l);
+    await AsyncStorage.setItem(CHAVE_LOJA, JSON.stringify(l)).catch(() => {});
+  };
+
+  const definirPin = async (novo: string) => {
+    setPin(novo);
+    setAdminLiberado(true);
+    await AsyncStorage.setItem(CHAVE_PIN, novo).catch(() => {});
+  };
+
+  const liberarAdmin = (tentativa: string) => {
+    const ok = !!pin && tentativa === pin;
+    if (ok) setAdminLiberado(true);
+    return ok;
+  };
 
   const gravar = useCallback((fn: (d: AppData) => AppData) => {
     const novo = fn(ref.current);
@@ -188,6 +261,51 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     gravar((d) => ({ ...d, agendamentos: d.agendamentos.filter((x) => x.id !== id) }));
   };
 
+  const salvarProduto: Ctx['salvarProduto'] = async (p) => {
+    const existente = p.id ? ref.current.produtos.find((x) => x.id === p.id) : undefined;
+    const final: Produto = existente
+      ? { ...existente, ...p, id: existente.id }
+      : { ...p, id: uid(), criadoEm: new Date().toISOString() };
+    gravar((d) => ({
+      ...d,
+      produtos: existente ? d.produtos.map((x) => (x.id === final.id ? final : x)) : [final, ...d.produtos],
+    }));
+    return final;
+  };
+
+  const removerProduto = async (id: string) => {
+    gravar((d) => ({ ...d, produtos: d.produtos.filter((p) => p.id !== id) }));
+  };
+
+  const registrarVenda: Ctx['registrarVenda'] = async (v) => {
+    const venda: Venda = { ...v, id: uid(), numero: ref.current.proximaVenda, status: 'concluida' };
+    gravar((d) => ({
+      ...d,
+      proximaVenda: d.proximaVenda + 1,
+      vendas: [venda, ...d.vendas],
+      // baixa no estoque
+      produtos: d.produtos.map((p) => {
+        const q = venda.itens.filter((i) => i.produtoId === p.id).reduce((t, i) => t + i.qtd, 0);
+        return q ? { ...p, estoque: p.estoque - q } : p;
+      }),
+    }));
+    return venda;
+  };
+
+  const cancelarVenda = async (id: string) => {
+    const v = ref.current.vendas.find((x) => x.id === id);
+    if (!v || v.status === 'cancelada') return;
+    gravar((d) => ({
+      ...d,
+      vendas: d.vendas.map((x) => (x.id === id ? { ...x, status: 'cancelada' } : x)),
+      // devolve ao estoque
+      produtos: d.produtos.map((p) => {
+        const q = v.itens.filter((i) => i.produtoId === p.id).reduce((t, i) => t + i.qtd, 0);
+        return q ? { ...p, estoque: p.estoque + q } : p;
+      }),
+    }));
+  };
+
   const carregarExemplo = async () => {
     const ex = gerarExemplo();
     for (const a of ex.agendamentos) a.notificationId = await avisoDoAgendamento(a);
@@ -216,9 +334,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       carregarExemplo,
       apagarTudo,
       cliente: (id) => (id ? dados.clientes.find((c) => c.id === id) : undefined),
+      salvarProduto,
+      removerProduto,
+      registrarVenda,
+      cancelarVenda,
+      modelos,
+      salvarModelo,
+      removerModelo,
+      loja,
+      salvarLoja,
+      temPin: !!pin,
+      adminLiberado,
+      definirPin,
+      liberarAdmin,
+      bloquearAdmin: () => setAdminLiberado(false),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dados, carregado],
+    [dados, carregado, modelos, pin, adminLiberado, loja],
   );
 
   return <DataContext.Provider value={valor}>{children}</DataContext.Provider>;
