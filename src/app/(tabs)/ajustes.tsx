@@ -39,7 +39,20 @@ export default function Ajustes() {
 
       <Titulo>Contatos</Titulo>
       <Card style={{ paddingVertical: 4 }}>
-        <ItemContato icon="logo-instagram" cor="#E1306C" titulo="Instagram" valor={`@${CONTATO.instagram}`} url={LINKS.instagram} />
+        <View style={st.perfil}>
+          <Image
+            source={require('../../../assets/perfil.png')}
+            style={st.foto}
+            contentFit="cover"
+            contentPosition={{ top: '20%' }}
+            accessibilityLabel="Foto de Marcel Lisboa"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={st.perfilNome}>Marcel Lisboa</Text>
+            <Text style={st.perfilCargo}>Técnico responsável · Drones & Video Games</Text>
+          </View>
+        </View>
+        <ItemContato borda icon="logo-instagram" cor="#E1306C" titulo="Instagram" valor={`@${CONTATO.instagram}`} url={LINKS.instagram} />
         <ItemContato icon="logo-whatsapp" cor="#25D366" titulo="WhatsApp" valor={celularFormatado()} url={LINKS.whatsapp} borda />
         <ItemContato icon="call" cor={colors.primary} titulo="Celular" valor={celularFormatado()} url={LINKS.telefone} borda />
         <ItemContato icon="mail" cor="#60A5FA" titulo="E-mail" valor={CONTATO.email} url={LINKS.email} borda />
@@ -134,6 +147,10 @@ const st = StyleSheet.create({
   bannerTitulo: { color: colors.text, fontSize: 22, fontWeight: '800' },
   bannerSub: { color: colors.textSec, fontSize: 13 },
   nota: { color: colors.textMuted, fontSize: 12, marginTop: 8 },
+  perfil: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  foto: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: colors.primary },
+  perfilNome: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  perfilCargo: { color: colors.textSec, fontSize: 13, marginTop: 2 },
   contato: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   contatoBorda: { borderTopWidth: 1, borderTopColor: colors.border },
   contatoIcone: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
