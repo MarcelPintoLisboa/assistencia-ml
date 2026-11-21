@@ -40,7 +40,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen name="clientes" options={{ title: 'Clientes', tabBarIcon: icone('people-outline', 'people') }} />
-      <Tabs.Screen name="ajustes" options={{ title: 'Ajustes', tabBarIcon: icone('settings-outline', 'settings') }} />
+      <Tabs.Screen name="ajustes" options={{ title: 'Menu', tabBarIcon: icone('menu-outline', 'menu') }} />
     </Tabs>
   );
 }

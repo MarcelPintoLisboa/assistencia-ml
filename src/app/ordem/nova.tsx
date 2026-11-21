@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CampoData } from '../../components/CampoData';
 import { Botao, Campo, Card, Chips, Rotulo, s as ui, Titulo } from '../../components/ui';
-import { fmtMoeda, parseMoeda, PRIORIDADE, STATUS, STATUS_ORDEM, TIPOS_EQUIPAMENTO, uid } from '../../lib/format';
+import {
+  exemplosEquipamento, fmtMoeda, parseMoeda, PRIORIDADE, procedimentosSugeridos, STATUS, STATUS_ORDEM, TIPOS_EQUIPAMENTO, uid,
+} from '../../lib/format';
 import { useDados } from '../../lib/store';
 import type { Prioridade, Procedimento, StatusOS } from '../../lib/types';
 import { colors, radius } from '../../theme';
-
-const PROCEDIMENTOS_SUGERIDOS = ['Testes iniciais', 'Backup de dados', 'Limpeza interna', 'Troca de peça', 'Teste final', 'Avisar cliente'];
 
 export default function NovaOrdem() {
   const { id, clienteId: clienteParam } = useLocalSearchParams<{ id?: string; clienteId?: string }>();
@@ -22,7 +22,8 @@ export default function NovaOrdem() {
   const [nomeNovo, setNomeNovo] = useState('');
   const [telNovo, setTelNovo] = useState('');
 
-  const [tipo, setTipo] = useState(atual?.tipoEquipamento ?? 'Celular');
+  const [tipo, setTipo] = useState(atual?.tipoEquipamento ?? 'Drone');
+  const ex = exemplosEquipamento(tipo);
   const [marca, setMarca] = useState(atual?.marca ?? '');
   const [modelo, setModelo] = useState(atual?.modelo ?? '');
   const [serie, setSerie] = useState(atual?.numeroSerie ?? '');
@@ -138,14 +139,14 @@ export default function NovaOrdem() {
           <Chips opcoes={TIPOS_EQUIPAMENTO.map((t) => ({ value: t, label: t }))} valor={tipo} onChange={setTipo} />
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Campo label="Marca" value={marca} onChangeText={setMarca} placeholder="Ex.: Samsung" />
+              <Campo label="Marca" value={marca} onChangeText={setMarca} placeholder={ex.marca} />
             </View>
             <View style={{ flex: 1 }}>
-              <Campo label="Modelo" value={modelo} onChangeText={setModelo} placeholder="Ex.: Galaxy S23" />
+              <Campo label="Modelo" value={modelo} onChangeText={setModelo} placeholder={ex.modelo} />
             </View>
           </View>
-          <Campo label="Nº de série / IMEI" value={serie} onChangeText={setSerie} autoCapitalize="characters" />
-          <Campo label="Acessórios deixados" value={acessorios} onChangeText={setAcessorios} placeholder="Carregador, capa, cabo…" />
+          <Campo label="Nº de série" value={serie} onChangeText={setSerie} autoCapitalize="characters" />
+          <Campo label="Acessórios deixados" value={acessorios} onChangeText={setAcessorios} placeholder={ex.acessorios} />
           <Campo label="Defeito relatado *" value={defeito} onChangeText={setDefeito} multiline placeholder="O que o cliente relatou" />
           <Campo label="Diagnóstico técnico" value={diagnostico} onChangeText={setDiagnostico} multiline placeholder="Preenchido após avaliação" />
         </Card>
@@ -212,7 +213,7 @@ export default function NovaOrdem() {
             </Pressable>
           </View>
           <View style={[ui.chips, { marginTop: 10, marginBottom: 0 }]}>
-            {PROCEDIMENTOS_SUGERIDOS.filter((s) => !procs.some((p) => p.descricao === s)).map((s) => (
+            {procedimentosSugeridos(tipo).filter((s) => !procs.some((p) => p.descricao === s)).map((s) => (
               <Pressable key={s} onPress={() => addProc(s)} style={ui.chip}>
                 <Text style={ui.chipTxt}>+ {s}</Text>
               </Pressable>

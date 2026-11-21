@@ -113,7 +113,13 @@ export default function Painel() {
           <View style={st.logo}>
             <Ionicons name="build" size={18} color={colors.bg} />
           </View>
-          <Text style={st.marca}>ASSISTÊNCIA ML</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={st.marca}>ASSISTÊNCIA ML</Text>
+            <Text style={st.nicho}>DRONES & VIDEO GAMES</Text>
+          </View>
+          <Pressable onPress={() => router.push('/ajustes')} hitSlop={10} style={st.btnContato} accessibilityLabel="Contatos">
+            <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
+          </Pressable>
         </View>
         <Text style={st.saudacao}>{saudacao}!</Text>
         <Text style={st.data}>
@@ -254,6 +260,17 @@ const st = StyleSheet.create({
   heroTopo: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 28 },
   logo: { width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   marca: { color: colors.text, fontWeight: '800', letterSpacing: 2, fontSize: 14 },
+  nicho: { color: colors.primary, fontWeight: '700', letterSpacing: 1.5, fontSize: 10, marginTop: 1 },
+  btnContato: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(14,26,51,0.8)',
+    borderWidth: 1,
+    borderColor: colors.primary + '50',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   saudacao: { color: colors.text, fontSize: 30, fontWeight: '800' },
   data: { color: colors.textSec, fontSize: 15, marginTop: 2, marginBottom: 20 },
   heroResumo: {

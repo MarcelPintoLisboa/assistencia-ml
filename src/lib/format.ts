@@ -73,7 +73,7 @@ export const PRIORIDADE: Record<Prioridade, { label: string; color: string }> = 
 };
 
 export const TIPO_AG: Record<TipoAgendamento, { label: string; icon: IconName }> = {
-  visita: { label: 'Visita técnica', icon: 'car-outline' },
+  visita: { label: 'Visita / teste de voo', icon: 'car-outline' },
   entrega: { label: 'Entrega', icon: 'exit-outline' },
   retirada: { label: 'Retirada', icon: 'download-outline' },
   manutencao: { label: 'Manutenção preventiva', icon: 'build-outline' },
@@ -90,6 +90,22 @@ export const LEMBRETES = [
 ];
 
 export const TIPOS_EQUIPAMENTO = [
-  'Celular', 'Notebook', 'Computador', 'Tablet', 'Impressora',
-  'TV', 'Videogame', 'Eletrodoméstico', 'Outro',
+  'Drone', 'Rádio controle', 'Óculos FPV', 'Bateria inteligente', 'Gimbal / câmera',
+  'Videogame', 'Console portátil', 'Controle / joystick', 'Outro',
 ];
+
+const DRONE = ['Drone', 'Rádio controle', 'Óculos FPV', 'Bateria inteligente', 'Gimbal / câmera'];
+export const ehDrone = (tipo: string) => DRONE.includes(tipo);
+
+/** Procedimentos sugeridos conforme o tipo de equipamento. */
+export const procedimentosSugeridos = (tipo: string) =>
+  ehDrone(tipo)
+    ? ['Inspeção visual / avarias', 'Teste de motores e ESCs', 'Atualizar firmware', 'Calibrar IMU e bússola',
+       'Calibrar gimbal', 'Verificar hélices', 'Teste de bateria', 'Teste de voo', 'Avisar cliente']
+    : ['Testes iniciais', 'Limpeza interna', 'Troca de pasta térmica', 'Verificar HDMI / portas',
+       'Teste de leitor / HD', 'Atualizar sistema', 'Teste de analógicos (drift)', 'Teste final', 'Avisar cliente'];
+
+export const exemplosEquipamento = (tipo: string) =>
+  ehDrone(tipo)
+    ? { marca: 'Ex.: DJI', modelo: 'Ex.: Mini 4 Pro', acessorios: 'Baterias, controle, hélices, case…' }
+    : { marca: 'Ex.: Sony', modelo: 'Ex.: PS5', acessorios: 'Controles, cabos, fonte…' };

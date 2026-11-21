@@ -11,14 +11,14 @@ const nomes = [
 ];
 
 const equipamentos: [string, string, string, string][] = [
-  ['Celular', 'Samsung', 'Galaxy S23', 'Tela trincada, touch falhando'],
-  ['Notebook', 'Dell', 'Inspiron 15', 'Não liga, possível fonte'],
-  ['Celular', 'Apple', 'iPhone 13', 'Bateria descarregando rápido'],
-  ['Impressora', 'HP', 'LaserJet M1132', 'Atolando papel'],
-  ['Tablet', 'Lenovo', 'Tab M10', 'Conector de carga solto'],
-  ['Computador', 'Montado', 'Ryzen 5', 'Reiniciando sozinho'],
-  ['TV', 'LG', '50UQ8050', 'Sem imagem, com som'],
-  ['Videogame', 'Sony', 'PS5', 'Superaquecendo'],
+  ['Drone', 'DJI', 'Mini 4 Pro', 'Queda na água, não liga'],
+  ['Videogame', 'Sony', 'PS5', 'Superaquecendo e desligando'],
+  ['Drone', 'DJI', 'Air 3', 'Gimbal tremendo, erro de calibração'],
+  ['Controle / joystick', 'Sony', 'DualSense', 'Analógico com drift'],
+  ['Videogame', 'Microsoft', 'Xbox Series X', 'Sem sinal no HDMI'],
+  ['Rádio controle', 'DJI', 'RC-N2', 'Perde conexão com o drone'],
+  ['Console portátil', 'Nintendo', 'Switch OLED', 'Não carrega'],
+  ['Drone', 'DJI', 'Mavic 3', 'Motor travado após queda'],
 ];
 
 const proc = (...d: string[]) => d.map((descricao, i) => ({ id: uid(), descricao, feito: i === 0 }));
@@ -63,7 +63,7 @@ export function gerarExemplo(): AppData {
       marca: eq[1],
       modelo: eq[2],
       numeroSerie: 'SN' + (100000 + i * 137),
-      acessorios: i % 2 ? 'Carregador' : '',
+      acessorios: i % 2 ? (eq[0] === 'Drone' ? '2 baterias, controle' : 'Cabo HDMI, fonte') : '',
       defeito: eq[3],
       diagnostico: status === 'recebido' ? '' : 'Avaliado em bancada.',
       status,
@@ -74,7 +74,10 @@ export function gerarExemplo(): AppData {
       previsaoEntrega: dia(entrada + 5, 17),
       dataSaida: saida,
       garantiaDias: 90,
-      procedimentos: proc('Testes iniciais', 'Abrir e limpar', 'Substituir componente', 'Teste final'),
+      procedimentos:
+        eq[0] === 'Drone'
+          ? proc('Inspeção visual', 'Teste de motores', 'Calibrar IMU e bússola', 'Teste de voo')
+          : proc('Testes iniciais', 'Limpeza interna', 'Troca de pasta térmica', 'Teste final'),
       historico: [{ data: dia(entrada, 9), status: 'recebido', nota: 'Equipamento recebido' }],
     });
   }
@@ -92,10 +95,10 @@ export function gerarExemplo(): AppData {
   });
 
   const agendamentos = [
-    ag(0, 15, 'Entrega do iPhone 13', 'entrega', 2),
-    ag(1, 9, 'Visita para instalação de impressora', 'visita', 3),
-    ag(2, 14, 'Retirada de notebook', 'retirada', 1),
-    ag(5, 10, 'Manutenção preventiva — servidor', 'manutencao', 4),
+    ag(0, 15, 'Entrega do DJI Air 3', 'entrega', 2),
+    ag(1, 9, 'Teste de voo com cliente — Mavic 3', 'visita', 3),
+    ag(2, 14, 'Retirada do PS5', 'retirada', 1),
+    ag(5, 10, 'Revisão preventiva — frota de drones', 'manutencao', 4),
   ];
 
   return { clientes, ordens, agendamentos, proximoNumero: numero };

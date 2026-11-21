@@ -2,7 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Alert, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Linking from 'expo-linking';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { celularFormatado, CONTATO, LINKS } from '../../lib/contato';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao, Card, Titulo } from '../../components/ui';
 import { prepararNotificacoes } from '../../lib/notifications';
@@ -26,14 +28,22 @@ export default function Ajustes() {
 
   return (
     <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 16, paddingBottom: 40 }}>
-      <Text style={st.h1}>Ajustes</Text>
+      <Text style={st.h1}>Menu</Text>
 
       <View style={st.banner}>
         <Image source={require('../../../assets/marca.png')} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient colors={['transparent', 'rgba(5,11,26,0.9)']} style={StyleSheet.absoluteFill} />
         <Text style={st.bannerTitulo}>Assistência ML</Text>
-        <Text style={st.bannerSub}>Controle completo da sua assistência técnica</Text>
+        <Text style={st.bannerSub}>Assistência técnica de drones e video games</Text>
       </View>
+
+      <Titulo>Contatos</Titulo>
+      <Card style={{ paddingVertical: 4 }}>
+        <ItemContato icon="logo-instagram" cor="#E1306C" titulo="Instagram" valor={`@${CONTATO.instagram}`} url={LINKS.instagram} />
+        <ItemContato icon="logo-whatsapp" cor="#25D366" titulo="WhatsApp" valor={celularFormatado()} url={LINKS.whatsapp} borda />
+        <ItemContato icon="call" cor={colors.primary} titulo="Celular" valor={celularFormatado()} url={LINKS.telefone} borda />
+        <ItemContato icon="mail" cor="#60A5FA" titulo="E-mail" valor={CONTATO.email} url={LINKS.email} borda />
+      </Card>
 
       <Titulo>Seus dados</Titulo>
       <Card style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
@@ -86,6 +96,29 @@ export default function Ajustes() {
   );
 }
 
+function ItemContato({
+  icon, cor, titulo, valor, url, borda,
+}: {
+  icon: keyof typeof Ionicons.glyphMap; cor: string; titulo: string; valor: string; url: string; borda?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={() => Linking.openURL(url)}
+      style={({ pressed }) => [st.contato, borda && st.contatoBorda, pressed && { opacity: 0.7 }]}
+      accessibilityLabel={`${titulo}: ${valor}`}
+    >
+      <View style={[st.contatoIcone, { backgroundColor: cor + '22' }]}>
+        <Ionicons name={icon} size={20} color={cor} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.textSec, fontSize: 12 }}>{titulo}</Text>
+        <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{valor}</Text>
+      </View>
+      <Ionicons name="open-outline" size={18} color={colors.textMuted} />
+    </Pressable>
+  );
+}
+
 function Num({ n, label }: { n: number; label: string }) {
   return (
     <View style={{ alignItems: 'center' }}>
@@ -101,4 +134,7 @@ const st = StyleSheet.create({
   bannerTitulo: { color: colors.text, fontSize: 22, fontWeight: '800' },
   bannerSub: { color: colors.textSec, fontSize: 13 },
   nota: { color: colors.textMuted, fontSize: 12, marginTop: 8 },
+  contato: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  contatoBorda: { borderTopWidth: 1, borderTopColor: colors.border },
+  contatoIcone: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 });
