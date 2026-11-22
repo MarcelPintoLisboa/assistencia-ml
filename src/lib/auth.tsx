@@ -38,7 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       },
       criarConta: async (email, senha) => {
-        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password: senha });
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password: senha,
+          options: { data: { app: 'Assistência ML' } }, // aparece em usuarios.app_cadastro
+        });
         if (error) throw error;
         return Boolean(data.session);
       },
