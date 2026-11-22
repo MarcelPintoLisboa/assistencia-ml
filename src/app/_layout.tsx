@@ -1,10 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import { DarkTheme, router, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
+import Login from '../components/Login';
+import { AuthProvider, useAuth } from '../lib/auth';
 import { prepararNotificacoes } from '../lib/notifications';
-import { DataProvider } from '../lib/store';
+import { DataProvider, useDados } from '../lib/store';
 import { colors } from '../theme';
 
 const tema = {
@@ -34,8 +37,64 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={tema}>
-      <DataProvider>
+      <AuthProvider>
         <StatusBar style="light" />
+        <Portao />
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+function Centro({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.bg }}>
+      {children}
+    </View>
+  );
+}
+
+// Sem login: tela de entrar. Com login: carrega os dados da base e mostra o app.
+function Portao() {
+  const { pronto, user } = useAuth();
+  if (!pronto) return <Centro><ActivityIndicator color={colors.primary} size="large" /></Centro>;
+  if (!user) return <Login />;
+  return (
+    <DataProvider>
+      <Carregamento />
+    </DataProvider>
+  );
+}
+
+function Carregamento() {
+  const { carregado, erroCarga, recarregar } = useDados();
+  const { sair } = useAuth();
+  if (!carregado) {
+    return (
+      <Centro>
+        <ActivityIndicator color={colors.primary} size="large" />
+        <Text style={{ marginTop: 12, color: colors.textSec }}>Carregando seus dados…</Text>
+      </Centro>
+    );
+  }
+  if (erroCarga) {
+    return (
+      <Centro>
+        <Ionicons name="cloud-offline" size={48} color={colors.textSec} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 12 }}>Sem conexão</Text>
+        <Text style={{ color: colors.textSec, textAlign: 'center', marginTop: 6 }}>{erroCarga}</Text>
+        <Pressable
+          onPress={recarregar}
+          style={{ backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 28, marginTop: 20 }}
+        >
+          <Text style={{ color: colors.bg, fontWeight: '800' }}>Tentar de novo</Text>
+        </Pressable>
+        <Pressable onPress={sair} style={{ marginTop: 14 }}>
+          <Text style={{ color: colors.primary }}>Sair da conta</Text>
+        </Pressable>
+      </Centro>
+    );
+  }
+  return (
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.bg },
@@ -62,7 +121,5 @@ export default function RootLayout() {
           <Stack.Screen name="etiquetas/editar" options={{ title: 'Personalizar etiqueta' }} />
           <Stack.Screen name="loja" options={{ title: 'Dados da loja' }} />
         </Stack>
-      </DataProvider>
-    </ThemeProvider>
   );
 }

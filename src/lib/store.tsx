@@ -1,17 +1,26 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert } from 'react-native';
+import { useAuth } from './auth';
 import { gerarExemplo } from './exemplo';
+import {
+  carregarDaNuvem, enviarDiferencas, enviarTudo, removerModeloDaNuvem, salvarLojaNaNuvem, salvarModeloNaNuvem,
+} from './nuvem';
+import { mensagemErro } from './supabase';
 import { fmtHora, STATUS, TIPO_AG, uid } from './format';
 import { agendarAviso, cancelarAviso } from './notifications';
 import { LOJA_PADRAO } from './documentos';
 import { modeloPadrao } from './etiqueta';
 import type { Agendamento, AppData, Cliente, DadosLoja, ModeloEtiqueta, OrdemServico, Produto, StatusOS, Venda } from './types';
 
+// Os dados ficam na base de dados (Supabase), separados por usuário.
+// Estas chaves guardavam os dados só no aparelho (versão sem login): são oferecidos para envio à conta.
 const CHAVE = '@assistencia-ml/dados-v1';
-// Modelos de etiqueta (com imagens) e PIN ficam em chaves separadas para não pesar os dados principais.
 const CHAVE_MODELOS = '@assistencia-ml/etiquetas-v1';
-const CHAVE_PIN = '@assistencia-ml/admin-pin';
 const CHAVE_LOJA = '@assistencia-ml/loja-v1';
+// Continuam no aparelho: o PIN do administrador e os ids dos avisos agendados neste aparelho.
+const CHAVE_PIN = '@assistencia-ml/admin-pin';
+const CHAVE_AVISOS = '@assistencia-ml/avisos-v1';
 const VAZIO: AppData = {
   clientes: [], ordens: [], agendamentos: [], produtos: [], vendas: [], proximoNumero: 1, proximaVenda: 1,
 };
@@ -49,6 +58,8 @@ type NovoAgendamento = Omit<Agendamento, 'id' | 'notificationId'> & { id?: strin
 
 interface Ctx extends AppData {
   carregado: boolean;
+  erroCarga: string;
+  recarregar: () => Promise<void>;
   salvarCliente: (c: Omit<Cliente, 'id' | 'criadoEm'> & { id?: string }) => Promise<Cliente>;
   removerCliente: (id: string) => Promise<void>;
   salvarOrdem: (o: NovaOrdem) => Promise<OrdemServico>;
@@ -92,48 +103,124 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [pin, setPin] = useState<string | null>(null);
   const [adminLiberado, setAdminLiberado] = useState(false);
   const [loja, setLoja] = useState<DadosLoja>(LOJA_PADRAO);
+  const [erroCarga, setErroCarga] = useState('');
+  const { user } = useAuth();
+  // fila: as gravações na base acontecem uma de cada vez, na ordem em que foram feitas
+  const fila = useRef<Promise<void>>(Promise.resolve());
 
-  useEffect(() => {
-    Promise.all([AsyncStorage.getItem(CHAVE), AsyncStorage.getItem(CHAVE_MODELOS), AsyncStorage.getItem(CHAVE_PIN), AsyncStorage.getItem(CHAVE_LOJA)])
-      .then(([txt, txtModelos, txtPin, txtLoja]) => {
-        if (txtLoja) setLoja({ ...LOJA_PADRAO, ...JSON.parse(txtLoja) });
-        if (txt) {
-          const d = { ...VAZIO, ...JSON.parse(txt) } as AppData;
-          ref.current = d;
-          setDados(d);
-        }
-        if (txtModelos) {
-          const m = JSON.parse(txtModelos) as ModeloEtiqueta[];
-          if (m.length) {
-            modelosRef.current = m;
-            setModelos(m);
-          }
-        }
-        if (txtPin) setPin(txtPin);
-      })
-      .catch(() => {})
-      .finally(() => setCarregado(true));
+  // ids dos avisos (notificações) agendados neste aparelho, por OS / agendamento
+  const salvarAvisos = (d: AppData) => {
+    const mapa: Record<string, string> = {};
+    for (const o of d.ordens) if (o.notificationId) mapa[o.id] = o.notificationId;
+    for (const a of d.agendamentos) if (a.notificationId) mapa[a.id] = a.notificationId;
+    AsyncStorage.setItem(CHAVE_AVISOS, JSON.stringify(mapa)).catch(() => {});
+  };
+
+  const recarregar = useCallback(async () => {
+    try {
+      const [nuvem, txtAvisos, txtPin] = await Promise.all([
+        carregarDaNuvem(), AsyncStorage.getItem(CHAVE_AVISOS), AsyncStorage.getItem(CHAVE_PIN),
+      ]);
+      const avisos: Record<string, string> = txtAvisos ? JSON.parse(txtAvisos) : {};
+      const d = nuvem.dados;
+      d.ordens = d.ordens.map((o) => (avisos[o.id] ? { ...o, notificationId: avisos[o.id] } : o));
+      d.agendamentos = d.agendamentos.map((a) => (avisos[a.id] ? { ...a, notificationId: avisos[a.id] } : a));
+      ref.current = d;
+      setDados(d);
+      const m = nuvem.modelos.length ? nuvem.modelos : [modeloPadrao()];
+      modelosRef.current = m;
+      setModelos(m);
+      setLoja({ ...LOJA_PADRAO, ...(nuvem.loja ?? {}) });
+      setPin(txtPin);
+      setErroCarga('');
+    } catch (e) {
+      setErroCarga(mensagemErro(e));
+    } finally {
+      setCarregado(true);
+    }
   }, []);
+
+  // Oferece enviar para a conta os dados que estavam salvos só neste aparelho (versão sem login)
+  const oferecerDadosLocais = useCallback(async () => {
+    try {
+      const [txt, txtModelos, txtLoja] = await Promise.all([
+        AsyncStorage.getItem(CHAVE), AsyncStorage.getItem(CHAVE_MODELOS), AsyncStorage.getItem(CHAVE_LOJA),
+      ]);
+      const local = txt ? ({ ...VAZIO, ...JSON.parse(txt) } as AppData) : null;
+      const modelosLocais: ModeloEtiqueta[] = txtModelos ? JSON.parse(txtModelos) : [];
+      const lojaLocal: DadosLoja | null = txtLoja ? { ...LOJA_PADRAO, ...JSON.parse(txtLoja) } : null;
+      const qtd = local
+        ? local.clientes.length + local.ordens.length + local.agendamentos.length + local.produtos.length + local.vendas.length
+        : 0;
+      if (!qtd && !modelosLocais.length && !lojaLocal) return;
+      const limpar = () => AsyncStorage.multiRemove([CHAVE, CHAVE_MODELOS, CHAVE_LOJA]).catch(() => {});
+      Alert.alert(
+        'Dados neste aparelho',
+        `Encontramos dados salvos só neste aparelho (${local?.clientes.length ?? 0} clientes, ${local?.ordens.length ?? 0} ordens, ` +
+          `${local?.vendas.length ?? 0} vendas). Deseja enviá-los para a sua conta?`,
+        [
+          { text: 'Depois', style: 'cancel' },
+          { text: 'Apagar do aparelho', style: 'destructive', onPress: limpar },
+          {
+            text: 'Enviar',
+            onPress: async () => {
+              try {
+                if (local) await enviarTudo(local, modelosLocais);
+                else if (modelosLocais.length) await enviarTudo(VAZIO, modelosLocais);
+                if (lojaLocal && user) await salvarLojaNaNuvem(lojaLocal, user.id);
+                await limpar();
+                await recarregar();
+                Alert.alert('Pronto', 'Os dados deste aparelho foram enviados para a sua conta.');
+              } catch (e) {
+                Alert.alert('Não foi possível enviar', mensagemErro(e));
+              }
+            },
+          },
+        ],
+      );
+    } catch {
+      // dados locais ilegíveis: ignora
+    }
+  }, [recarregar, user]);
+
+  // carrega os dados do usuário logado
+  // (o DataProvider só é montado com alguém logado e começa com carregado = false)
+  useEffect(() => {
+    if (!user) return;
+    // o estado só muda depois da resposta da base (dentro do .then), não durante o effect
+    Promise.resolve().then(recarregar).then(oferecerDadosLocais);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const falhaAoSalvar = (e: unknown) => {
+    Alert.alert('Não foi possível salvar', mensagemErro(e));
+    recarregar(); // volta a mostrar o que está de fato na base
+  };
 
   const gravarModelos = (lista: ModeloEtiqueta[]) => {
     modelosRef.current = lista;
     setModelos(lista);
-    AsyncStorage.setItem(CHAVE_MODELOS, JSON.stringify(lista)).catch(() => {});
   };
 
   const salvarModelo = async (m: ModeloEtiqueta) => {
     const l = modelosRef.current;
     gravarModelos(l.some((x) => x.id === m.id) ? l.map((x) => (x.id === m.id ? m : x)) : [...l, m]);
+    fila.current = fila.current.then(() => salvarModeloNaNuvem(m)).catch(falhaAoSalvar);
   };
 
   const removerModelo = async (id: string) => {
     const l = modelosRef.current.filter((x) => x.id !== id);
     gravarModelos(l.length ? l : [modeloPadrao()]);
+    fila.current = fila.current.then(() => removerModeloDaNuvem(id)).catch(falhaAoSalvar);
   };
 
   const salvarLoja = async (l: DadosLoja) => {
     setLoja(l);
-    await AsyncStorage.setItem(CHAVE_LOJA, JSON.stringify(l)).catch(() => {});
+    if (!user) return;
+    try {
+      await salvarLojaNaNuvem(l, user.id);
+    } catch (e) {
+      falhaAoSalvar(e);
+    }
   };
 
   const definirPin = async (novo: string) => {
@@ -148,12 +235,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return ok;
   };
 
+  // Aplica a alteração na tela na hora e envia para a base só o que mudou.
   const gravar = useCallback((fn: (d: AppData) => AppData) => {
-    const novo = fn(ref.current);
+    const antes = ref.current;
+    const novo = fn(antes);
     ref.current = novo;
     setDados(novo);
-    AsyncStorage.setItem(CHAVE, JSON.stringify(novo)).catch(() => {});
-  }, []);
+    salvarAvisos(novo);
+    fila.current = fila.current.then(() => enviarDiferencas(antes, novo)).catch(falhaAoSalvar);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nomeCliente = (id: string) => ref.current.clientes.find((c) => c.id === id)?.nome ?? 'cliente';
 
@@ -322,6 +412,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ...dados,
       carregado,
+      erroCarga,
+      recarregar,
       salvarCliente,
       removerCliente,
       salvarOrdem,
@@ -350,7 +442,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       bloquearAdmin: () => setAdminLiberado(false),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dados, carregado, modelos, pin, adminLiberado, loja],
+    [dados, carregado, erroCarga, modelos, pin, adminLiberado, loja],
   );
 
   return <DataContext.Provider value={valor}>{children}</DataContext.Provider>;

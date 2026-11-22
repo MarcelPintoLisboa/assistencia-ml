@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao, Card, Titulo } from '../../components/ui';
 import { prepararNotificacoes } from '../../lib/notifications';
 import { useDados } from '../../lib/store';
+import { useAuth } from '../../lib/auth';
 import { colors, radius } from '../../theme';
 
 function confirmar(titulo: string, msg: string, acao: () => void) {
@@ -26,6 +27,7 @@ function confirmar(titulo: string, msg: string, acao: () => void) {
 export default function Ajustes() {
   const insets = useSafeAreaInsets();
   const { clientes, ordens, agendamentos, carregarExemplo, apagarTudo } = useDados();
+  const { user, sair } = useAuth();
 
   return (
     <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 16, paddingBottom: 40 }}>
@@ -109,6 +111,21 @@ export default function Ajustes() {
           variante="perigo"
           icon="trash-outline"
           onPress={() => confirmar('Apagar tudo', 'Todos os clientes, ordens e agendamentos serão removidos. Não é possível desfazer.', apagarTudo)}
+        />
+      </Card>
+
+      <Titulo>Conta</Titulo>
+      <Card style={{ gap: 10 }}>
+        <Text style={{ color: colors.textSec, fontSize: 12 }}>Conectado como</Text>
+        <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{user?.email}</Text>
+        <Text style={st.nota}>
+          Seus dados ficam salvos na nuvem. Entre com a mesma conta em outro aparelho para ver os mesmos clientes, ordens e vendas.
+        </Text>
+        <Botao
+          label="Sair da conta"
+          variante="perigo"
+          icon="log-out-outline"
+          onPress={() => confirmar('Sair da conta', 'Seus dados continuam salvos na nuvem. Para ver de novo, é só entrar.', sair)}
         />
       </Card>
 
