@@ -27,7 +27,7 @@ function confirmar(titulo: string, msg: string, acao: () => void) {
 
 export default function Ajustes() {
   const insets = useSafeAreaInsets();
-  const { clientes, ordens, agendamentos, carregarExemplo, apagarTudo, loja, ehAdmin } = useDados();
+  const { clientes, ordens, agendamentos, loja, ehAdmin } = useDados();
   const { user, sair } = useAuth();
   const { equipeDisponivel, ehAdminGeral, empresa } = useConta();
 
@@ -134,22 +134,6 @@ export default function Ajustes() {
           }}
         />
       </Card>
-
-      {ehAdmin && <Titulo>Dados de exemplo</Titulo>}
-      {ehAdmin && <Card style={{ gap: 10 }}>
-        <Botao
-          label="Carregar dados de exemplo"
-          variante="secundario"
-          icon="sparkles-outline"
-          onPress={() => confirmar('Carregar exemplo', 'Isso substitui todos os dados atuais por dados fictícios.', carregarExemplo)}
-        />
-        <Botao
-          label="Apagar todos os dados"
-          variante="perigo"
-          icon="trash-outline"
-          onPress={() => confirmar('Apagar tudo', 'Todos os clientes, ordens e agendamentos serão removidos. Não é possível desfazer.', apagarTudo)}
-        />
-      </Card>}
 
       <Titulo>Conta</Titulo>
       <Card style={{ gap: 10 }}>

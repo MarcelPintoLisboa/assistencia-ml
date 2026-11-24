@@ -4,7 +4,6 @@ import { Alert } from 'react-native';
 import { useAuth } from './auth';
 import { useConta } from './conta';
 import { itensSemEstoque } from './estoque';
-import { gerarExemplo } from './exemplo';
 import {
   carregarDaNuvem, definirDono, enviarDiferencas, enviarTudo, removerModeloDaNuvem, salvarLojaNaNuvem, salvarModeloNaNuvem,
 } from './nuvem';
@@ -70,8 +69,6 @@ interface Ctx extends AppData {
   salvarAgendamento: (a: NovoAgendamento) => Promise<Agendamento>;
   alternarAgendamento: (id: string) => Promise<void>;
   removerAgendamento: (id: string) => Promise<void>;
-  carregarExemplo: () => Promise<void>;
-  apagarTudo: () => Promise<void>;
   cliente: (id: string | null | undefined) => Cliente | undefined;
   // Vendas / estoque
   salvarProduto: (p: Omit<Produto, 'id' | 'criadoEm'> & { id?: string }) => Promise<Produto>;
@@ -389,20 +386,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const carregarExemplo = async () => {
-    if (!ehAdmin) return;
-    const ex = gerarExemplo();
-    for (const a of ex.agendamentos) a.notificationId = await avisoDoAgendamento(a);
-    gravar(() => ex);
-  };
-
-  const apagarTudo = async () => {
-    if (!ehAdmin) return;
-    for (const o of ref.current.ordens) await cancelarAviso(o.notificationId);
-    for (const a of ref.current.agendamentos) await cancelarAviso(a.notificationId);
-    gravar(() => VAZIO);
-  };
-
   const valor = useMemo<Ctx>(
     () => ({
       ...dados,
@@ -418,8 +401,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       salvarAgendamento,
       alternarAgendamento,
       removerAgendamento,
-      carregarExemplo,
-      apagarTudo,
       cliente: (id) => (id ? dados.clientes.find((c) => c.id === id) : undefined),
       salvarProduto,
       removerProduto,

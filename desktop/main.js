@@ -21,6 +21,13 @@ const logDebug = (m) => DEBUG && fs.appendFileSync(`${DEBUG}.log`, `${new Date()
 process.on('uncaughtException', (e) => logDebug('[erro] ' + (e && e.stack)));
 logDebug('[main] iniciando ' + process.versions.electron);
 
+// O Electron põe o nome do app ("Assistência ML") no User-Agent. O "ê" fora do padrão ASCII faz
+// o Supabase falhar ao gravar a sessão no login ("Database error granting user").
+// Identificação só com caracteres simples:
+app.userAgentFallback = app.userAgentFallback
+  .replace(/Assist\S*ML\/[\d.]+/g, `AssistenciaML/${app.getVersion()}`)
+  .replace(/[^\x20-\x7E]/g, '');
+
 // Uma janela só: abrir o atalho de novo traz a janela existente para frente
 const unica = app.requestSingleInstanceLock();
 logDebug('[main] instancia unica: ' + unica);

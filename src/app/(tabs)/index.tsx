@@ -17,7 +17,7 @@ type Periodo = '7d' | '30d' | '6m';
 
 export default function Painel() {
   const insets = useSafeAreaInsets();
-  const { ordens, agendamentos, cliente, alternarAgendamento, carregarExemplo, carregado, ehAdmin, loja } = useDados();
+  const { ordens, agendamentos, cliente, alternarAgendamento, carregado, loja } = useDados();
   const [periodo, setPeriodo] = useState<Periodo>('7d');
   const agora = new Date();
 
@@ -143,9 +143,8 @@ export default function Painel() {
       <View style={{ paddingHorizontal: 16 }}>
         {carregado && ordens.length === 0 ? (
           <Card style={{ marginTop: 8 }}>
-            <Vazio icon="rocket-outline" texto="Bem-vindo! Cadastre sua primeira ordem de serviço ou carregue dados de exemplo para conhecer o app.">
+            <Vazio icon="rocket-outline" texto="Bem-vindo! Cadastre sua primeira ordem de serviço.">
               <Botao label="Nova ordem de serviço" icon="add" onPress={() => router.push('/ordem/nova')} style={{ alignSelf: 'stretch' }} />
-              {ehAdmin && <Botao label="Carregar exemplo" variante="secundario" icon="sparkles-outline" onPress={carregarExemplo} style={{ alignSelf: 'stretch' }} />}
             </Vazio>
           </Card>
         ) : (

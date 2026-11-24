@@ -31,6 +31,7 @@ export function mensagemErro(e: unknown): string {
   const msg = String((e as { message?: string })?.message || e || '');
   if (/network|fetch|timeout|internet/i.test(msg)) return 'Sem conexão com a internet. Verifique a rede e tente de novo.';
   if (/Invalid login credentials/i.test(msg)) return 'E-mail ou senha incorretos.';
+  if (/Database error (granting|querying)/i.test(msg)) return 'O servidor recusou o login por um erro no banco de dados. Tente de novo; se continuar, fale com a ML Softwares.';
   if (/banned/i.test(msg)) return 'Sua conta foi desativada. Fale com a ML Softwares: (81) 98805-5220.';
   if (/excluido|relation "?(public\.)?assistencia_usuarios|function public\.assistencia_|assistencia_minha_conta/i.test(msg)) return 'Esta função precisa do script de equipe no Supabase (supabase/migrations/20261124_equipe_e_permissoes.sql).';
   if (/row-level security/i.test(msg)) return 'Sua conta está desativada ou sem permissão para esta ação. Fale com a ML Softwares.';
