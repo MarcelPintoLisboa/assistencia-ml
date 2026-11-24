@@ -15,6 +15,8 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 const DEBUG = process.env.ASSISTENCIA_DEBUG;
+// diagnóstico roda com dados separados, sem conflitar com o app aberto
+if (DEBUG) app.setPath('userData', path.join(app.getPath('temp'), 'assistencia-ml-debug'));
 const logDebug = (m) => DEBUG && fs.appendFileSync(`${DEBUG}.log`, `${new Date().toISOString()} ${m}\n`);
 process.on('uncaughtException', (e) => logDebug('[erro] ' + (e && e.stack)));
 logDebug('[main] iniciando ' + process.versions.electron);
@@ -70,12 +72,19 @@ function criarJanela() {
     janela.webContents.on('did-fail-load', (_e, cod, desc, url) => log(`[falha] ${cod} ${desc} ${url}`));
     janela.webContents.once('did-finish-load', () => {
       log('[carregou] ' + janela.webContents.getURL());
+      // ASSISTENCIA_DEBUG_JS: código executado na tela (ex.: testar a conexão com o Supabase)
+      if (process.env.ASSISTENCIA_DEBUG_JS) {
+        janela.webContents
+          .executeJavaScript(process.env.ASSISTENCIA_DEBUG_JS)
+          .then((r) => log('[js] ' + JSON.stringify(r)))
+          .catch((e) => log('[js erro] ' + e));
+      }
       setTimeout(async () => {
         const img = await janela.webContents.capturePage();
         fs.writeFileSync(debug, img.toPNG());
         log('[print salvo]');
         app.quit();
-      }, 5000);
+      }, process.env.ASSISTENCIA_DEBUG_JS ? 15000 : 5000);
     });
   }
 }
@@ -144,6 +153,7 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(() => {
+  if (!unica) return;
   Menu.setApplicationMenu(null);
 
   // Serve desktop/app. Rotas do app (ex.: /ordem/123) caem no index.html.
