@@ -1,27 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, Stack, useFocusEffect } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Badge, Botao, Card, Titulo } from '../../components/ui';
-import { ADMIN_PRINCIPAL, alterarMembro, listarMembros, removerMembro, useConta } from '../../lib/conta';
+import {
+  ADMIN_PRINCIPAL, alterarMembro, gerarSenhaProvisoria, listarMembros, redefinirSenha, removerMembro, useConta,
+} from '../../lib/conta';
 import { mensagemErro } from '../../lib/supabase';
 import type { Membro } from '../../lib/types';
 import { colors, radius } from '../../theme';
 
+// Usuários de uma empresa. O admin da empresa vê só a dele; o admin geral abre qualquer uma por Acessos.
 export default function Usuarios() {
-  const { ehAdmin, dono, email } = useConta();
+  const { ehAdmin, ehAdminGeral, dono, email, empresa: nomeMinhaEmpresa } = useConta();
+  const params = useLocalSearchParams<{ empresa?: string; nome?: string }>();
+  const empresa = (ehAdminGeral && params.empresa) || dono;
+  const nomeEmpresa = empresa === dono ? nomeMinhaEmpresa : params.nome ?? '';
   const [lista, setLista] = useState<Membro[] | null>(null);
   const [erro, setErro] = useState('');
 
   const carregar = useCallback(() => {
-    if (!dono) return;
-    listarMembros(dono)
+    if (!empresa) return;
+    listarMembros(empresa)
       .then((l) => {
         setLista(l);
         setErro('');
       })
       .catch((e) => setErro(mensagemErro(e)));
-  }, [dono]);
+  }, [empresa]);
 
   useFocusEffect(carregar);
 
@@ -43,40 +49,62 @@ export default function Usuarios() {
     }
   };
 
+  const novaSenha = (m: Membro) => {
+    const senha = gerarSenhaProvisoria();
+    Alert.alert('Nova senha provisória', `Gerar a senha provisória "${senha}" para ${m.email}? A senha atual deixa de funcionar.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Gerar',
+        onPress: () =>
+          fazer(async () => {
+            await redefinirSenha(m.id, senha);
+            Alert.alert('Senha redefinida', `Passe para ${m.email}:\n\nSenha provisória: ${senha}\n\nNo próximo acesso a pessoa cria a própria senha.`);
+          }),
+      },
+    ]);
+  };
+
   const opcoes = (m: Membro) => {
-    if (m.email === ADMIN_PRINCIPAL || m.dono) {
-      return Alert.alert(m.dono ? 'Dono da loja' : 'Administrador principal', `${m.email} é sempre administrador e não pode ser alterado.`);
+    const protegido = m.email === ADMIN_PRINCIPAL || m.dono || m.email === email;
+    const botoes: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [];
+    if (!protegido) {
+      botoes.push(
+        { text: m.admin ? 'Tornar usuário' : 'Tornar administrador', onPress: () => fazer(() => alterarMembro(m.id, { admin: !m.admin })) },
+        { text: m.ativo ? 'Desativar acesso' : 'Reativar acesso', onPress: () => fazer(() => alterarMembro(m.id, { ativo: !m.ativo })) },
+      );
     }
-    if (m.email === email) return Alert.alert('Sua conta', 'Peça a outro administrador para alterar a sua permissão.');
-    Alert.alert(m.nome || m.email, m.email, [
-      {
-        text: m.admin ? 'Tornar usuário' : 'Tornar administrador',
-        onPress: () => fazer(() => alterarMembro(m.id, { admin: !m.admin })),
-      },
-      {
-        text: m.ativo ? 'Desativar acesso' : 'Reativar acesso',
-        onPress: () => fazer(() => alterarMembro(m.id, { ativo: !m.ativo })),
-      },
-      {
-        text: 'Remover da equipe',
+    if (ehAdminGeral && m.email !== email) botoes.push({ text: 'Gerar nova senha provisória', onPress: () => novaSenha(m) });
+    if (!protegido) {
+      botoes.push({
+        text: 'Remover da empresa',
         style: 'destructive',
         onPress: () =>
-          Alert.alert('Remover usuário', `${m.email} deixará de acessar os dados da loja.`, [
+          Alert.alert('Remover usuário', `${m.email} deixará de acessar os dados da empresa.`, [
             { text: 'Cancelar', style: 'cancel' },
             { text: 'Remover', style: 'destructive', onPress: () => fazer(() => removerMembro(m.id)) },
           ]),
-      },
-      { text: 'Fechar', style: 'cancel' },
-    ]);
+      });
+    }
+    if (!botoes.length) {
+      const motivo = m.email === email
+        ? 'Peça a outro administrador para alterar a sua permissão.'
+        : `${m.email} é ${m.dono ? 'o dono da empresa' : 'o administrador geral'} e não pode ser alterado.`;
+      return Alert.alert(m.nome || m.email, motivo);
+    }
+    Alert.alert(m.nome || m.email, m.email, [...botoes, { text: 'Fechar', style: 'cancel' }]);
   };
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Usuários' }} />
+      <Stack.Screen options={{ title: nomeEmpresa ? `Usuários · ${nomeEmpresa}` : 'Usuários' }} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <Botao label="Novo usuário" icon="person-add" onPress={() => router.push('/usuarios/novo')} />
+        <Botao
+          label="Adicionar usuário"
+          icon="person-add"
+          onPress={() => router.push({ pathname: '/usuarios/novo', params: { empresa: empresa ?? '', nome: nomeEmpresa } })}
+        />
 
-        <Titulo>Usuários da loja</Titulo>
+        <Titulo>Usuários da empresa</Titulo>
         {!!erro && (
           <Card style={{ borderColor: colors.warning }}>
             <Text style={{ color: colors.warning, lineHeight: 20 }}>{erro}</Text>
@@ -85,7 +113,7 @@ export default function Usuarios() {
         {!erro && lista === null && <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />}
         {!erro && lista?.length === 0 && (
           <Card>
-            <Text style={{ color: colors.textSec }}>Nenhum usuário cadastrado. Toque em “Novo usuário”.</Text>
+            <Text style={{ color: colors.textSec }}>Nenhum usuário cadastrado. Toque em “Adicionar usuário”.</Text>
           </Card>
         )}
         {lista && lista.length > 0 && (
@@ -107,7 +135,7 @@ export default function Usuarios() {
 }
 
 function Linha({ m, voce }: { m: Membro; voce: boolean }) {
-  const { nome, email, admin, ativo, aceito } = m;
+  const { nome, email, admin, ativo, trocarSenha } = m;
   return (
     <View style={st.linha}>
       <View style={st.avatar}>
@@ -121,9 +149,9 @@ function Linha({ m, voce }: { m: Membro; voce: boolean }) {
         {!!nome && <Text style={{ color: colors.textSec, fontSize: 12 }} numberOfLines={1}>{email}</Text>}
         <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
           <Badge label={admin ? 'Administrador' : 'Usuário'} color={admin ? colors.primary : colors.textSec} />
-          {m.dono && <Badge label="Dono da loja" color={colors.good} icon="star-outline" />}
+          {m.dono && <Badge label="Dono da empresa" color={colors.good} icon="star-outline" />}
           {!ativo && <Badge label="Desativado" color={colors.critical} icon="close-circle-outline" />}
-          {ativo && !aceito && <Badge label="Aguardando 1º acesso" color={colors.warning} icon="time-outline" />}
+          {ativo && trocarSenha && <Badge label="Senha provisória" color={colors.warning} icon="key-outline" />}
         </View>
       </View>
     </View>

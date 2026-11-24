@@ -1,33 +1,38 @@
-import { createClient } from '@supabase/supabase-js';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './auth';
-import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase';
-import type { Membro } from './types';
+import { supabase } from './supabase';
+import type { Empresa, Membro } from './types';
 
-/** Administrador principal: sempre admin, com acesso a tudo. */
+/** Administrador geral: libera os acessos de todas as empresas. */
 export const ADMIN_PRINCIPAL = 'mapl11@hotmail.com';
 
-export interface Convite {
-  id: string;
-  admin: boolean;
-  loja: string;
-}
+export type Situacao = 'ok' | 'sem_acesso' | 'desativado';
 
 interface ContaCtx {
   pronta: boolean;
   erro: string;
-  /** Conta dona da loja (owner_id dos dados). null = acesso desativado pelo admin. */
+  situacao: Situacao;
+  /** Empresa do usuário (owner_id dos dados). null = sem acesso. */
   dono: string | null;
-  /** campo admin do usuário em assistencia_usuarios */
+  /** administrador da empresa (campo admin de assistencia_usuarios) */
   ehAdmin: boolean;
+  /** administrador geral: cadastra acessos e empresas */
+  ehAdminGeral: boolean;
+  /** ainda usa a senha provisória */
+  trocarSenha: boolean;
+  empresa: string;
   email: string;
-  convite: Convite | null;
-  /** false enquanto o script de equipe (supabase/migrations) não foi aplicado na base */
+  /** false enquanto o script (supabase/migrations) não foi aplicado na base */
   equipeDisponivel: boolean;
   recarregarConta: () => Promise<void>;
-  aceitarConvite: () => Promise<void>;
-  recusarConvite: () => Promise<void>;
+  /** troca a senha do login e marca que a provisória já foi trocada */
+  definirSenha: (nova: string) => Promise<void>;
 }
+
+type Estado = Pick<ContaCtx, 'pronta' | 'erro' | 'situacao' | 'dono' | 'trocarSenha' | 'empresa' | 'equipeDisponivel'> & {
+  admin: boolean;
+  adminGeral: boolean;
+};
 
 const Ctx = createContext<ContaCtx | null>(null);
 
@@ -37,50 +42,64 @@ const funcaoInexistente = (e: { code?: string; message?: string } | null) =>
 const tabelaInexistente = (e: { code?: string; message?: string } | null) =>
   !!e && (e.code === 'PGRST205' || e.code === '42P01' || /could not find the table|does not exist/i.test(e.message ?? ''));
 
+const AVISO_SCRIPT =
+  'Esta função precisa do script supabase/migrations/20261124_equipe_e_permissoes.sql rodado no Supabase (SQL Editor).';
+
 export function ContaProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const email = (user?.email ?? '').toLowerCase();
-  const [estado, setEstado] = useState<Omit<ContaCtx, 'recarregarConta' | 'aceitarConvite' | 'recusarConvite' | 'ehAdmin' | 'email'> & { admin: boolean }>({
-    admin: false,
-    pronta: false, erro: '', dono: null, convite: null, equipeDisponivel: false,
+  const [estado, setEstado] = useState<Estado>({
+    pronta: false, erro: '', situacao: 'ok', dono: null, trocarSenha: false, empresa: '',
+    equipeDisponivel: false, admin: false, adminGeral: false,
   });
 
   const recarregarConta = useCallback(async () => {
     if (!user) return;
     const { data, error } = await supabase.rpc('assistencia_minha_conta');
     if (funcaoInexistente(error)) {
-      // Base ainda sem o script de equipe: cada conta é dona e admin dos próprios dados
-      setEstado({ pronta: true, erro: '', dono: user.id, convite: null, equipeDisponivel: false, admin: true });
+      // Base ainda sem o script: cada conta usa os próprios dados, como antes
+      setEstado({
+        pronta: true, erro: '', situacao: 'ok', dono: user.id, trocarSenha: false, empresa: '',
+        equipeDisponivel: false, admin: true, adminGeral: email === ADMIN_PRINCIPAL,
+      });
       return;
     }
     if (error) {
       setEstado((s) => ({ ...s, pronta: true, erro: error.message }));
       return;
     }
-    const d = data as { dono: string | null; admin: boolean; convite: Convite | null };
-    setEstado({ pronta: true, erro: '', dono: d.dono, convite: d.convite, equipeDisponivel: true, admin: !!d.admin });
-  }, [user]);
+    const d = data as {
+      situacao: Situacao; dono: string | null; admin: boolean; admin_geral: boolean; trocar_senha: boolean; empresa: string | null;
+    };
+    setEstado({
+      pronta: true, erro: '', situacao: d.situacao, dono: d.dono, trocarSenha: !!d.trocar_senha, empresa: d.empresa ?? '',
+      equipeDisponivel: true, admin: !!d.admin, adminGeral: !!d.admin_geral,
+    });
+  }, [user, email]);
 
   useEffect(() => {
     Promise.resolve().then(recarregarConta);
   }, [recarregarConta]);
 
   const value = useMemo<ContaCtx>(() => {
-    const { admin, ...resto } = estado;
+    const { admin, adminGeral, ...resto } = estado;
     return {
       ...resto,
       email,
+      ehAdminGeral: email === ADMIN_PRINCIPAL || adminGeral,
       ehAdmin: email === ADMIN_PRINCIPAL || admin,
       recarregarConta,
-      aceitarConvite: async () => {
-        const { error } = await supabase.rpc('assistencia_aceitar_convite');
-        if (error) throw error;
-        await recarregarConta();
-      },
-      recusarConvite: async () => {
-        const { error } = await supabase.rpc('assistencia_recusar_convite');
-        if (error) throw error;
-        await recarregarConta();
+      definirSenha: async (nova) => {
+        const { error } = await supabase.auth.updateUser({ password: nova });
+        if (error) {
+          if (/different from the old/i.test(error.message)) throw new Error('A nova senha precisa ser diferente da senha atual.');
+          throw error;
+        }
+        if (resto.equipeDisponivel) {
+          const { error: e2 } = await supabase.rpc('assistencia_senha_trocada');
+          if (e2) throw e2;
+        }
+        setEstado((s) => ({ ...s, trocarSenha: false }));
       },
     };
   }, [estado, email, recarregarConta]);
@@ -94,10 +113,7 @@ export function useConta() {
   return c;
 }
 
-// ---------------- Equipe (somente admin) ----------------
-
-const AVISO_SCRIPT =
-  'A tabela assistencia_usuarios ainda não existe na base de dados. Rode o script supabase/migrations/20261124_equipe_e_permissoes.sql no Supabase (SQL Editor).';
+// ---------------- Acessos (somente administradores) ----------------
 
 const membroApp = (r: Record<string, unknown>): Membro => ({
   id: r.id as string,
@@ -106,51 +122,51 @@ const membroApp = (r: Record<string, unknown>): Membro => ({
   admin: !!r.admin,
   ativo: r.ativo as boolean,
   dono: !!r.user_id && r.user_id === r.owner_id,
-  aceito: !!r.user_id,
+  trocarSenha: !!r.trocar_senha,
   criadoEm: r.criado_em as string,
 });
 
-export async function listarMembros(dono: string): Promise<Membro[]> {
-  const { data, error } = await supabase.from('assistencia_usuarios').select('*').eq('owner_id', dono).order('criado_em');
+/** Usuários de uma empresa. O admin da empresa só enxerga a própria; o admin geral, qualquer uma. */
+export async function listarMembros(empresa: string): Promise<Membro[]> {
+  const { data, error } = await supabase.from('assistencia_usuarios').select('*').eq('owner_id', empresa).order('criado_em');
   if (tabelaInexistente(error)) throw new Error(AVISO_SCRIPT);
   if (error) throw error;
   return (data as Record<string, unknown>[]).map(membroApp);
 }
 
+/** Empresas cadastradas (somente administrador geral). */
+export async function listarEmpresas(): Promise<Empresa[]> {
+  const { data, error } = await supabase.rpc('assistencia_empresas');
+  if (funcaoInexistente(error)) throw new Error(AVISO_SCRIPT);
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    id: r.owner_id as string,
+    nome: (r.nome as string) || '',
+    donoEmail: (r.dono_email as string) || '',
+    usuarios: Number(r.usuarios) || 0,
+  }));
+}
+
 /**
- * Cria a conta de login da pessoa (sem trocar o login de quem está usando o app) e a cadastra
- * como membro da loja. Se o e-mail já tiver conta, só cadastra o convite.
- * Devolve se a pessoa precisa confirmar o e-mail antes de entrar.
+ * Cadastra um acesso com senha provisória. empresa = owner_id da empresa; sem empresa
+ * (somente admin geral) cria uma nova empresa com o nome informado, e a pessoa vira dona e admin.
+ * Se o e-mail já tinha login, só libera o acesso (a senha dele não muda).
  */
-export async function cadastrarMembro(dono: string, m: { nome: string; email: string; senha: string; admin: boolean }) {
-  const email = m.email.trim().toLowerCase();
-  // cliente separado, sem guardar sessão: o signUp não desloga o admin
-  const avulso = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'assistencia-cadastro-equipe' },
+export async function cadastrarUsuario(m: {
+  nome: string; email: string; senha: string; admin: boolean; empresa: string | null; novaEmpresa?: string;
+}) {
+  const { data, error } = await supabase.rpc('assistencia_criar_usuario', {
+    p_email: m.email.trim().toLowerCase(),
+    p_senha: m.senha,
+    p_nome: m.nome.trim(),
+    p_admin: m.admin,
+    p_empresa: m.empresa,
+    p_nova_empresa: m.novaEmpresa?.trim() || null,
   });
-  let jaTinhaConta = false;
-  let precisaConfirmar = false;
-  const { data, error } = await avulso.auth.signUp({
-    email,
-    password: m.senha,
-    options: { data: { app: 'Assistência ML', nome: m.nome.trim() } },
-  });
-  if (error) {
-    if (/already registered|already exists/i.test(error.message)) jaTinhaConta = true;
-    else throw error;
-  } else {
-    // e-mail já cadastrado: o Supabase devolve um usuário "falso" sem identidades
-    jaTinhaConta = (data.user?.identities?.length ?? 0) === 0;
-    precisaConfirmar = !jaTinhaConta && !data.session;
-    if (data.session) await avulso.auth.signOut().catch(() => {});
-  }
-  const { error: e2 } = await supabase
-    .from('assistencia_usuarios')
-    .insert({ owner_id: dono, email, nome: m.nome.trim(), admin: m.admin, ativo: true });
-  if (tabelaInexistente(e2)) throw new Error(AVISO_SCRIPT);
-  if (e2?.code === '23505') throw new Error('Este e-mail já está cadastrado em uma loja.');
-  if (e2) throw e2;
-  return { jaTinhaConta, precisaConfirmar };
+  if (funcaoInexistente(error)) throw new Error(AVISO_SCRIPT);
+  if (error) throw error;
+  const d = data as { ja_tinha_conta: boolean; empresa: string };
+  return { jaTinhaConta: !!d.ja_tinha_conta, empresa: d.empresa };
 }
 
 export async function alterarMembro(id: string, campos: Partial<Pick<Membro, 'nome' | 'admin' | 'ativo'>>) {
@@ -161,4 +177,20 @@ export async function alterarMembro(id: string, campos: Partial<Pick<Membro, 'no
 export async function removerMembro(id: string) {
   const { error } = await supabase.from('assistencia_usuarios').delete().eq('id', id);
   if (error) throw error;
+}
+
+/** Nova senha provisória (somente administrador geral). */
+export async function redefinirSenha(id: string, senha: string) {
+  const { error } = await supabase.rpc('assistencia_redefinir_senha', { p_id: id, p_senha: senha });
+  if (funcaoInexistente(error)) throw new Error(AVISO_SCRIPT);
+  if (error) throw error;
+}
+
+/** Senha provisória simples de ditar: 3 letras + 4 números. */
+export function gerarSenhaProvisoria() {
+  const letras = 'abcdefghjkmnpqrstuvwxyz';
+  let s = '';
+  for (let i = 0; i < 3; i++) s += letras[Math.floor(Math.random() * letras.length)];
+  for (let i = 0; i < 4; i++) s += Math.floor(Math.random() * 10);
+  return s;
 }

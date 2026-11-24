@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
@@ -11,8 +11,7 @@ import { colors, radius } from '../theme';
 
 // Tela de entrada (aparece quando não há usuário logado)
 export default function Login() {
-  const { entrar, criarConta } = useAuth();
-  const [modo, setModo] = useState<'entrar' | 'criar'>('entrar');
+  const { entrar } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [verSenha, setVerSenha] = useState(false);
@@ -25,12 +24,7 @@ export default function Login() {
     if (senha.length < 6) return setErro('A senha precisa ter pelo menos 6 caracteres.');
     setEnviando(true);
     try {
-      if (modo === 'entrar') {
-        await entrar(email, senha);
-      } else if (!(await criarConta(email, senha))) {
-        Alert.alert('Confirme seu e-mail', `Enviamos um link de confirmação para ${email.trim()}. Depois de confirmar, volte e toque em "Entrar".`);
-        setModo('entrar');
-      }
+      await entrar(email, senha);
     } catch (e) {
       setErro(mensagemErro(e));
     } finally {
@@ -47,7 +41,7 @@ export default function Login() {
           <Text style={s.sub}>Ordens, clientes e vendas salvos na nuvem.</Text>
 
           <View style={s.card}>
-            <Text style={s.titulo}>{modo === 'entrar' ? 'Entrar' : 'Criar conta'}</Text>
+            <Text style={s.titulo}>Entrar</Text>
 
             <Text style={s.label}>E-mail</Text>
             <TextInput
@@ -61,7 +55,7 @@ export default function Login() {
               <TextInput
                 style={[s.input, { flex: 1, borderWidth: 0, marginBottom: 0 }]} value={senha} onChangeText={setSenha}
                 placeholder="mínimo 6 caracteres" secureTextEntry={!verSenha} autoCapitalize="none"
-                textContentType={modo === 'entrar' ? 'password' : 'newPassword'} placeholderTextColor={colors.textMuted}
+                textContentType="password" placeholderTextColor={colors.textMuted}
                 onSubmitEditing={enviar} returnKeyType="go"
               />
               <Pressable onPress={() => setVerSenha((v) => !v)} hitSlop={8} style={{ paddingHorizontal: 12 }}>
@@ -72,15 +66,13 @@ export default function Login() {
             {erro ? <Text style={s.erro}>{erro}</Text> : null}
 
             <Pressable onPress={enviar} disabled={enviando} style={({ pressed }) => [s.botao, (pressed || enviando) && { opacity: 0.8 }]}>
-              {enviando ? <ActivityIndicator color={colors.bg} /> : <Text style={s.botaoTxt}>{modo === 'entrar' ? 'Entrar' : 'Criar conta'}</Text>}
+              {enviando ? <ActivityIndicator color={colors.bg} /> : <Text style={s.botaoTxt}>Entrar</Text>}
             </Pressable>
 
-            <Pressable onPress={() => { setModo(modo === 'entrar' ? 'criar' : 'entrar'); setErro(''); }} style={{ marginTop: 16 }}>
-              <Text style={s.trocar}>
-                {modo === 'entrar' ? 'Não tem conta? ' : 'Já tem conta? '}
-                <Text style={{ fontWeight: '700', color: colors.primary }}>{modo === 'entrar' ? 'Criar conta' : 'Entrar'}</Text>
-              </Text>
-            </Pressable>
+            <Text style={s.trocar}>
+              Sem acesso? O administrador libera seu e-mail com uma senha provisória. No primeiro acesso você cria a sua
+              própria senha.
+            </Text>
           </View>
           <Text style={s.rodape}>ML Softwares</Text>
         </ScrollView>
@@ -108,6 +100,6 @@ const s = StyleSheet.create({
   erro: { color: colors.critical, marginBottom: 12 },
   botao: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 15, alignItems: 'center' },
   botaoTxt: { color: colors.bg, fontWeight: '800', fontSize: 16 },
-  trocar: { textAlign: 'center', color: colors.textSec },
+  trocar: { textAlign: 'center', color: colors.textSec, marginTop: 16, fontSize: 13, lineHeight: 19 },
   rodape: { color: colors.textMuted, textAlign: 'center', marginTop: 20, fontSize: 12 },
 });

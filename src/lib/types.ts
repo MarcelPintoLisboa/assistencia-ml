@@ -110,9 +110,17 @@ export interface Membro {
   ativo: boolean;
   /** Dono da loja (não pode ser alterado nem removido) */
   dono: boolean;
-  /** Já entrou no app e aceitou fazer parte da loja */
-  aceito: boolean;
+  /** Ainda não trocou a senha provisória */
+  trocarSenha: boolean;
   criadoEm: string;
+}
+
+/** Empresa cadastrada pelo administrador geral (identificada pela conta do dono) */
+export interface Empresa {
+  id: string;
+  nome: string;
+  donoEmail: string;
+  usuarios: number;
 }
 
 export interface ItemVenda {

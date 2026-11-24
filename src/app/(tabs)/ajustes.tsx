@@ -29,7 +29,7 @@ export default function Ajustes() {
   const insets = useSafeAreaInsets();
   const { clientes, ordens, agendamentos, carregarExemplo, apagarTudo, loja, ehAdmin } = useDados();
   const { user, sair } = useAuth();
-  const { equipeDisponivel } = useConta();
+  const { equipeDisponivel, ehAdminGeral, empresa } = useConta();
 
   return (
     <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 16, paddingBottom: 40 }}>
@@ -90,11 +90,20 @@ export default function Ajustes() {
             <ItemMenu icon="business-outline" titulo="Empresa: nome e logo" desc="Vale para documentos, relatórios e etiquetas" onPress={() => router.push('/loja')} />
             <ItemMenu
               icon="person-add-outline"
-              titulo="Usuários"
-              desc={equipeDisponivel ? 'Cadastrar equipe e definir permissões' : 'Requer o script de equipe no Supabase'}
+              titulo="Usuários da empresa"
+              desc={equipeDisponivel ? 'Adicionar e remover usuários da sua empresa' : 'Requer o script de equipe no Supabase'}
               onPress={() => router.push('/usuarios')}
               borda
             />
+            {ehAdminGeral && (
+              <ItemMenu
+                icon="key-outline"
+                titulo="Acessos e empresas"
+                desc="Administrador geral: liberar acessos com senha provisória"
+                onPress={() => router.push('/acessos')}
+                borda
+              />
+            )}
           </Card>
         </>
       )}
@@ -147,8 +156,10 @@ export default function Ajustes() {
         <Text style={{ color: colors.textSec, fontSize: 12 }}>Conectado como</Text>
         <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{user?.email}</Text>
         <Text style={{ color: ehAdmin ? colors.primary : colors.textSec, fontWeight: '700' }}>
-          {ehAdmin ? 'Administrador' : 'Usuário'}
+          {ehAdminGeral ? 'Administrador geral' : ehAdmin ? 'Administrador' : 'Usuário'}
+          {empresa ? ` · ${empresa}` : ''}
         </Text>
+        <Botao label="Trocar senha" variante="secundario" icon="key-outline" onPress={() => router.push('/senha')} />
         <Text style={st.nota}>
           Seus dados ficam salvos na nuvem. Entre com a mesma conta em outro aparelho para ver os mesmos clientes, ordens e vendas.
         </Text>

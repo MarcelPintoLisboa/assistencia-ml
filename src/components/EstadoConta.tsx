@@ -7,16 +7,16 @@ import { mensagemErro } from '../lib/supabase';
 import { colors } from '../theme';
 import { Botao } from './ui';
 
-// Telas entre o login e o app: convite pendente, acesso desativado ou erro ao ler a conta.
+// Telas entre o login e o app: e-mail sem acesso, acesso desativado ou erro ao ler a conta.
 export function EstadoConta() {
   const { sair } = useAuth();
-  const { erro, convite, email, aceitarConvite, recusarConvite, recarregarConta } = useConta();
+  const { erro, situacao, email, recarregarConta } = useConta();
   const [ocupado, setOcupado] = useState(false);
 
-  const fazer = async (fn: () => Promise<void>) => {
+  const tentar = async () => {
     setOcupado(true);
     try {
-      await fn();
+      await recarregarConta();
     } catch (e) {
       Alert.alert('Não foi possível concluir', mensagemErro(e));
     } finally {
@@ -27,16 +27,16 @@ export function EstadoConta() {
   let icone: keyof typeof Ionicons.glyphMap = 'cloud-offline';
   let titulo = 'Sem conexão';
   let texto = mensagemErro(erro);
-  if (!erro && convite) {
-    icone = 'people';
-    titulo = 'Convite para a equipe';
-    texto =
-      `O administrador de ${convite.loja || 'uma loja'} cadastrou ${email} como ` +
-      `${convite.admin ? 'administrador' : 'usuário'}. Ao aceitar, você passa a usar os dados dessa loja.`;
-  } else if (!erro) {
+  if (!erro && situacao === 'desativado') {
     icone = 'lock-closed';
     titulo = 'Acesso desativado';
-    texto = 'Seu acesso foi desativado pelo administrador da loja. Fale com ele para reativar.';
+    texto = 'Seu acesso foi desativado pelo administrador da empresa. Fale com ele para reativar.';
+  } else if (!erro) {
+    icone = 'person-remove';
+    titulo = 'Sem acesso liberado';
+    texto =
+      `O e-mail ${email} ainda não tem acesso ao Assistência ML. ` +
+      'Peça ao administrador para liberar o seu acesso.';
   }
 
   return (
@@ -50,14 +50,7 @@ export function EstadoConta() {
         <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
       ) : (
         <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 24 }}>
-          {!erro && convite ? (
-            <>
-              <Botao label="Aceitar e entrar" icon="checkmark" onPress={() => fazer(aceitarConvite)} />
-              <Botao label="Recusar convite" variante="secundario" icon="close" onPress={() => fazer(recusarConvite)} />
-            </>
-          ) : (
-            <Botao label="Tentar de novo" icon="refresh" onPress={() => fazer(recarregarConta)} />
-          )}
+          <Botao label="Tentar de novo" icon="refresh" onPress={tentar} />
           <Botao label="Sair da conta" variante="secundario" icon="log-out-outline" onPress={sair} />
         </View>
       )}

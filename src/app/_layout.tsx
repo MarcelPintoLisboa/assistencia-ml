@@ -5,7 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import Login from '../components/Login';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { EstadoConta } from '../components/EstadoConta';
+import { TrocarSenha } from '../components/TrocarSenha';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { ContaProvider, useConta } from '../lib/conta';
 import { prepararNotificacoes } from '../lib/notifications';
@@ -70,7 +72,8 @@ function Portao() {
 function PortaoConta() {
   const conta = useConta();
   if (!conta.pronta) return <Centro><ActivityIndicator color={colors.primary} size="large" /></Centro>;
-  if (conta.erro || conta.convite || !conta.dono) return <EstadoConta />;
+  if (conta.erro || conta.situacao !== 'ok' || !conta.dono) return <EstadoConta />;
+  if (conta.trocarSenha) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}><TrocarSenha primeiroAcesso /></SafeAreaView>;
   return (
     <DataProvider key={conta.dono}>
       <Carregamento />
@@ -133,7 +136,9 @@ function Carregamento() {
           <Stack.Screen name="etiquetas/editar" options={{ title: 'Personalizar etiqueta' }} />
           <Stack.Screen name="loja" options={{ title: 'Empresa e documentos' }} />
           <Stack.Screen name="usuarios/index" options={{ title: 'Usuários' }} />
-          <Stack.Screen name="usuarios/novo" options={{ title: 'Novo usuário', presentation: 'modal' }} />
+          <Stack.Screen name="usuarios/novo" options={{ title: 'Novo acesso', presentation: 'modal' }} />
+          <Stack.Screen name="acessos" options={{ title: 'Acessos e empresas' }} />
+          <Stack.Screen name="senha" options={{ title: 'Trocar senha', presentation: 'modal' }} />
         </Stack>
   );
 }
