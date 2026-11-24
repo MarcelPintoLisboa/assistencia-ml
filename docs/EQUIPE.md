@@ -13,13 +13,13 @@ Antes de rodar o script, o app continua funcionando como antes (cada conta com o
 ## Como o acesso funciona
 
 - **Não existe mais "Criar conta" no app.** O login tem só e-mail e senha.
-- O **administrador geral** (mapl11@hotmail.com) libera os acessos em **Menu → Acessos e empresas → Liberar novo acesso**. Ele informa:
+- O **administrador geral** (mapl11@hotmail.com) libera os acessos em **Menu → Empresas e acessos**. Para criar uma empresa, toque em **Nova empresa**; para colocar alguém numa empresa existente, em **Liberar acesso em uma empresa**. Ele informa:
   - a empresa: uma existente ou **+ Nova empresa** (nesse caso a pessoa vira dona e administradora dela);
   - nome, e-mail e uma **senha provisória** (o app sugere uma, que pode ser trocada);
   - a permissão: **Usuário** ou **Administrador**.
 - No primeiro acesso, a pessoa entra com a senha provisória e o app **obriga a criar uma senha própria** antes de continuar. Depois ela pode trocar a senha em **Menu → Conta → Trocar senha**.
 - O **administrador de uma empresa** vai em **Menu → Usuários da empresa** e adiciona ou remove usuários **somente da empresa dele**. Ele também pode tornar alguém administrador e desativar ou reativar acessos.
-- O administrador geral abre qualquer empresa em **Acessos e empresas** e pode gerar uma **nova senha provisória** para quem esqueceu a senha.
+- O administrador geral abre qualquer empresa em **Empresas e acessos** e pode gerar uma **nova senha provisória** para quem esqueceu a senha.
 - Quem entra com um e-mail sem acesso liberado vê a tela "Sem acesso liberado".
 - Se o e-mail já tinha login em outro app da ML Softwares, o acesso é liberado e a pessoa entra com a senha que já usa.
 

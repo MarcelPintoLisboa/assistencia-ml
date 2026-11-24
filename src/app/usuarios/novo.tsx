@@ -13,7 +13,8 @@ const NOVA = '__nova__';
 // o admin de uma empresa cadastra só na própria.
 export default function NovoAcesso() {
   const { ehAdmin, ehAdminGeral, dono, empresa: minhaEmpresa } = useConta();
-  const params = useLocalSearchParams<{ empresa?: string; nome?: string }>();
+  const params = useLocalSearchParams<{ empresa?: string; nome?: string; nova?: string }>();
+  const soNova = ehAdminGeral && params.nova === '1';
   const fixa = ehAdminGeral ? params.empresa || null : dono;
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [escolha, setEscolha] = useState<string>(NOVA);
@@ -27,8 +28,8 @@ export default function NovoAcesso() {
 
   const escolhendo = ehAdminGeral && !fixa;
   useEffect(() => {
-    if (escolhendo) listarEmpresas().then(setEmpresas).catch((e) => setErro(mensagemErro(e)));
-  }, [escolhendo]);
+    if (escolhendo && !soNova) listarEmpresas().then(setEmpresas).catch((e) => setErro(mensagemErro(e)));
+  }, [escolhendo, soNova]);
 
   if (!ehAdmin || (!ehAdminGeral && !dono)) {
     return <Text style={{ color: colors.textSec, padding: 24, textAlign: 'center' }}>Somente administradores podem cadastrar usuários.</Text>;
@@ -66,11 +67,18 @@ export default function NovoAcesso() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Stack.Screen options={{ title: escolhendo ? 'Liberar acesso' : 'Adicionar usuário' }} />
+      <Stack.Screen options={{ title: soNova ? 'Nova empresa' : escolhendo ? 'Liberar acesso' : 'Adicionar usuário' }} />
       <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
         <Card>
-          <Rotulo>Empresa</Rotulo>
-          {escolhendo ? (
+          {soNova ? (
+            <Text style={{ color: colors.textSec, fontSize: 13, lineHeight: 19, marginBottom: 12 }}>
+              Informe o nome da empresa e quem será o dono dela. O dono entra com o e-mail e a senha provisória abaixo e
+              depois cadastra os usuários da empresa.
+            </Text>
+          ) : (
+            <Rotulo>Empresa</Rotulo>
+          )}
+          {soNova ? null : escolhendo ? (
             empresas === null ? (
               <ActivityIndicator color={colors.primary} style={{ alignSelf: 'flex-start', marginBottom: 12 }} />
             ) : (
@@ -89,6 +97,7 @@ export default function NovoAcesso() {
         </Card>
 
         <Card style={{ marginTop: 12 }}>
+          {criandoEmpresa && <Rotulo>Dono da empresa</Rotulo>}
           <Campo label="Nome da pessoa *" value={nome} onChangeText={setNome} placeholder="Nome do usuário" />
           <Campo label="E-mail (login) *" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
           <Campo label="Senha provisória *" value={senha} onChangeText={setSenha} autoCapitalize="none" autoCorrect={false} placeholder="Mínimo de 6 caracteres" />
@@ -120,7 +129,7 @@ export default function NovoAcesso() {
         {enviando ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
         ) : (
-          <Botao label="Liberar acesso" icon="person-add" onPress={salvar} style={{ marginTop: 20 }} />
+          <Botao label={criandoEmpresa ? 'Criar empresa' : 'Liberar acesso'} icon={criandoEmpresa ? 'business' : 'person-add'} onPress={salvar} style={{ marginTop: 20 }} />
         )}
       </ScrollView>
     </KeyboardAvoidingView>

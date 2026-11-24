@@ -97,9 +97,9 @@ export default function Ajustes() {
             />
             {ehAdminGeral && (
               <ItemMenu
-                icon="key-outline"
-                titulo="Acessos e empresas"
-                desc="Administrador geral: liberar acessos com senha provisória"
+                icon="business"
+                titulo="Empresas e acessos"
+                desc="Criar nova empresa e liberar acessos (admin geral)"
                 onPress={() => router.push('/acessos')}
                 borda
               />

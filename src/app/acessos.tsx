@@ -43,7 +43,10 @@ export default function Acessos() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      <Botao label="Liberar novo acesso" icon="person-add" onPress={() => router.push('/usuarios/novo')} />
+      <View style={{ gap: 10 }}>
+        <Botao label="Nova empresa" icon="business" onPress={() => router.push({ pathname: '/usuarios/novo', params: { nova: '1' } })} />
+        <Botao label="Liberar acesso em uma empresa" variante="secundario" icon="person-add" onPress={() => router.push('/usuarios/novo')} />
+      </View>
 
       <Titulo>Empresas</Titulo>
       {!!lista && lista.length > 5 && <Busca value={busca} onChangeText={setBusca} placeholder="Buscar empresa ou e-mail" />}

@@ -137,7 +137,7 @@ function Carregamento() {
           <Stack.Screen name="loja" options={{ title: 'Empresa e documentos' }} />
           <Stack.Screen name="usuarios/index" options={{ title: 'Usuários' }} />
           <Stack.Screen name="usuarios/novo" options={{ title: 'Novo acesso', presentation: 'modal' }} />
-          <Stack.Screen name="acessos" options={{ title: 'Acessos e empresas' }} />
+          <Stack.Screen name="acessos" options={{ title: 'Empresas e acessos' }} />
           <Stack.Screen name="senha" options={{ title: 'Trocar senha', presentation: 'modal' }} />
         </Stack>
   );
