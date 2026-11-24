@@ -68,12 +68,16 @@ export function ContaProvider({ children }: { children: React.ReactNode }) {
       setEstado((s) => ({ ...s, pronta: true, erro: error.message }));
       return;
     }
-    const d = data as {
-      situacao: Situacao; dono: string | null; admin: boolean; admin_geral: boolean; trocar_senha: boolean; empresa: string | null;
+    const d = (data ?? {}) as {
+      situacao?: Situacao; dono?: string | null; admin?: boolean; admin_geral?: boolean; trocar_senha?: boolean; empresa?: string | null;
     };
+    const principal = email === ADMIN_PRINCIPAL;
+    // Versão antiga do script (sem "situacao"): deduz pelo dono. O admin geral nunca fica de fora.
+    const dono = d.dono ?? (principal ? user.id : null);
+    const situacao: Situacao = principal ? 'ok' : d.situacao ?? (dono ? 'ok' : 'desativado');
     setEstado({
-      pronta: true, erro: '', situacao: d.situacao, dono: d.dono, trocarSenha: !!d.trocar_senha, empresa: d.empresa ?? '',
-      equipeDisponivel: true, admin: !!d.admin, adminGeral: !!d.admin_geral,
+      pronta: true, erro: '', situacao, dono, trocarSenha: !!d.trocar_senha, empresa: d.empresa ?? '',
+      equipeDisponivel: true, admin: principal || !!d.admin, adminGeral: principal || !!d.admin_geral,
     });
   }, [user, email]);
 
