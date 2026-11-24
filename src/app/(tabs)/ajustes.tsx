@@ -9,6 +9,7 @@ import { celularFormatado, CONTATO, LINKS } from '../../lib/contato';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao, Card, Titulo } from '../../components/ui';
 import { prepararNotificacoes } from '../../lib/notifications';
+import { useConta } from '../../lib/conta';
 import { useDados } from '../../lib/store';
 import { useAuth } from '../../lib/auth';
 import { colors, radius } from '../../theme';
@@ -26,8 +27,9 @@ function confirmar(titulo: string, msg: string, acao: () => void) {
 
 export default function Ajustes() {
   const insets = useSafeAreaInsets();
-  const { clientes, ordens, agendamentos, carregarExemplo, apagarTudo } = useDados();
+  const { clientes, ordens, agendamentos, carregarExemplo, apagarTudo, loja, ehAdmin } = useDados();
   const { user, sair } = useAuth();
+  const { equipeDisponivel } = useConta();
 
   return (
     <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 16, paddingBottom: 40 }}>
@@ -36,8 +38,17 @@ export default function Ajustes() {
       <View style={st.banner}>
         <Image source={require('../../../assets/marca.png')} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient colors={['transparent', 'rgba(5,11,26,0.9)']} style={StyleSheet.absoluteFill} />
-        <Text style={st.bannerTitulo}>Assistência ML</Text>
-        <Text style={st.bannerSub}>Assistência técnica de drones e video games</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {loja.logo && (
+            <View style={st.bannerLogo}>
+              <Image source={{ uri: loja.logo }} style={{ width: '100%', height: '100%' }} contentFit="contain" />
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={st.bannerTitulo} numberOfLines={2}>{loja.nome || 'Assistência ML'}</Text>
+            <Text style={st.bannerSub}>Assistência técnica de drones e video games</Text>
+          </View>
+        </View>
       </View>
 
       <Titulo>Contatos</Titulo>
@@ -64,11 +75,29 @@ export default function Ajustes() {
       <Titulo>Gestão</Titulo>
       <Card style={{ paddingVertical: 4 }}>
         <ItemMenu icon="people-outline" titulo="Clientes" desc={`${clientes.length} cadastrados`} onPress={() => router.push('/clientes')} />
-        <ItemMenu icon="cube-outline" titulo="Produtos e estoque" desc="Drones, video games, acessórios" onPress={() => router.push('/produtos')} borda />
-        <ItemMenu icon="stats-chart-outline" titulo="Indicadores de vendas" desc="Somente administrador (PIN)" onPress={() => router.push('/admin')} borda />
-        <ItemMenu icon="pricetags-outline" titulo="Modelos de etiqueta" desc="Logo, imagem de fundo, cores e tamanho" onPress={() => router.push('/etiquetas')} borda />
-        <ItemMenu icon="document-text-outline" titulo="Dados da loja e fichas" desc="Cabeçalho, logo, termo de venda" onPress={() => router.push('/loja')} borda />
+        {ehAdmin && (
+          <>
+            <ItemMenu icon="stats-chart-outline" titulo="Indicadores de vendas" desc="Faturamento, lucro e mais vendidos" onPress={() => router.push('/admin')} borda />
+            <ItemMenu icon="pricetags-outline" titulo="Modelos de etiqueta" desc="Imagem de fundo, cores e tamanho" onPress={() => router.push('/etiquetas')} borda />
+          </>
+        )}
       </Card>
+
+      {ehAdmin && (
+        <>
+          <Titulo>Configurações (administrador)</Titulo>
+          <Card style={{ paddingVertical: 4 }}>
+            <ItemMenu icon="business-outline" titulo="Empresa: nome e logo" desc="Vale para documentos, relatórios e etiquetas" onPress={() => router.push('/loja')} />
+            <ItemMenu
+              icon="person-add-outline"
+              titulo="Usuários"
+              desc={equipeDisponivel ? 'Cadastrar equipe e definir permissões' : 'Requer o script de equipe no Supabase'}
+              onPress={() => router.push('/usuarios')}
+              borda
+            />
+          </Card>
+        </>
+      )}
 
       <Titulo>Seus dados</Titulo>
       <Card style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
@@ -76,7 +105,6 @@ export default function Ajustes() {
         <Num n={clientes.length} label="Clientes" />
         <Num n={agendamentos.length} label="Agendamentos" />
       </Card>
-      <Text style={st.nota}>Os dados ficam salvos neste aparelho.</Text>
 
       <Titulo>Lembretes</Titulo>
       <Card style={{ gap: 12 }}>
@@ -98,8 +126,8 @@ export default function Ajustes() {
         />
       </Card>
 
-      <Titulo>Dados de exemplo</Titulo>
-      <Card style={{ gap: 10 }}>
+      {ehAdmin && <Titulo>Dados de exemplo</Titulo>}
+      {ehAdmin && <Card style={{ gap: 10 }}>
         <Botao
           label="Carregar dados de exemplo"
           variante="secundario"
@@ -112,12 +140,15 @@ export default function Ajustes() {
           icon="trash-outline"
           onPress={() => confirmar('Apagar tudo', 'Todos os clientes, ordens e agendamentos serão removidos. Não é possível desfazer.', apagarTudo)}
         />
-      </Card>
+      </Card>}
 
       <Titulo>Conta</Titulo>
       <Card style={{ gap: 10 }}>
         <Text style={{ color: colors.textSec, fontSize: 12 }}>Conectado como</Text>
         <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{user?.email}</Text>
+        <Text style={{ color: ehAdmin ? colors.primary : colors.textSec, fontWeight: '700' }}>
+          {ehAdmin ? 'Administrador' : 'Usuário'}
+        </Text>
         <Text style={st.nota}>
           Seus dados ficam salvos na nuvem. Entre com a mesma conta em outro aparelho para ver os mesmos clientes, ordens e vendas.
         </Text>
@@ -186,6 +217,7 @@ function Num({ n, label }: { n: number; label: string }) {
 const st = StyleSheet.create({
   h1: { color: colors.text, fontSize: 26, fontWeight: '800', marginBottom: 12 },
   banner: { height: 150, borderRadius: radius.lg, overflow: 'hidden', justifyContent: 'flex-end', padding: 16 },
+  bannerLogo: { width: 56, height: 56, borderRadius: 12, backgroundColor: '#fff', padding: 4, overflow: 'hidden' },
   bannerTitulo: { color: colors.text, fontSize: 22, fontWeight: '800' },
   bannerSub: { color: colors.textSec, fontSize: 13 },
   nota: { color: colors.textMuted, fontSize: 12, marginTop: 8 },

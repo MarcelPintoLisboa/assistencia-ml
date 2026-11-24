@@ -10,7 +10,7 @@ import { colors, radius } from '../../theme';
 
 export default function DetalheVenda() {
   const { id, nova } = useLocalSearchParams<{ id: string; nova?: string }>();
-  const { vendas, produtos, cliente, loja, cancelarVenda, adminLiberado } = useDados();
+  const { vendas, produtos, cliente, loja, cancelarVenda, ehAdmin } = useDados();
   const v = vendas.find((x) => x.id === id);
   if (!v) return <Vazio icon="help-circle-outline" texto="Venda não encontrada." />;
 
@@ -20,8 +20,8 @@ export default function DetalheVenda() {
   const fimGarantia = v.garantiaDias ? fmtData(new Date(new Date(v.data).getTime() + v.garantiaDias * 86400000).toISOString()) : null;
 
   const cancelar = () => {
-    if (!adminLiberado) {
-      const msg = 'Somente o administrador pode cancelar vendas. Desbloqueie em Vendas → Indicadores.';
+    if (!ehAdmin) {
+      const msg = 'Somente o administrador pode cancelar vendas.';
       return Platform.OS === 'web' ? globalThis.alert?.(msg) : Alert.alert('Acesso restrito', msg);
     }
     const fazer = () => cancelarVenda(v.id);
@@ -70,7 +70,7 @@ export default function DetalheVenda() {
           ))}
           {v.desconto > 0 && <Text style={{ color: colors.textSec, marginTop: 8, textAlign: 'right' }}>Desconto: − {fmtMoeda(v.desconto)}</Text>}
           <Text style={{ color: colors.primary, fontSize: 26, fontWeight: '900', textAlign: 'right', marginTop: 6 }}>{fmtMoeda(v.total)}</Text>
-          {adminLiberado && (
+          {ehAdmin && (
             <Text style={{ color: colors.textSec, textAlign: 'right', fontSize: 12 }}>
               Lucro bruto: {fmtMoeda(lucro)} ({v.total ? Math.round((lucro / v.total) * 100) : 0}%)
             </Text>

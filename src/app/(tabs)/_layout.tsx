@@ -23,13 +23,14 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: { backgroundColor: colors.bgAlt, borderTopColor: colors.border },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Painel', tabBarIcon: icone('speedometer-outline', 'speedometer') }} />
       <Tabs.Screen name="ordens" options={{ title: 'Ordens', tabBarIcon: icone('construct-outline', 'construct') }} />
       <Tabs.Screen name="vendas" options={{ title: 'Vendas', tabBarIcon: icone('cart-outline', 'cart') }} />
+      <Tabs.Screen name="produtos" options={{ title: 'Produtos', tabBarIcon: icone('cube-outline', 'cube') }} />
       <Tabs.Screen
         name="agenda"
         options={{

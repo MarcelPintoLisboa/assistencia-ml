@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Barra, GraficoBarras } from '../components/GraficoBarras';
-import { Botao, Card, Chips, Titulo } from '../components/ui';
+import { Card, Chips, Titulo } from '../components/ui';
 import { CATEGORIA, DIAS_SEMANA, fmtMoeda, inicioDoDia, MESES, MESES_LONGOS, PAGAMENTO } from '../lib/format';
 import { useDados } from '../lib/store';
 import type { CategoriaProduto, FormaPagamento } from '../lib/types';
@@ -12,56 +12,30 @@ import { colors, radius } from '../theme';
 type Periodo = 'hoje' | '7d' | 'mes' | '6m';
 
 export default function Admin() {
-  const { temPin, adminLiberado } = useDados();
+  const { ehAdmin } = useDados();
   return (
     <>
       <Stack.Screen options={{ title: 'Painel do administrador' }} />
-      {adminLiberado ? <Indicadores /> : <Bloqueio criar={!temPin} />}
+      {ehAdmin ? (
+        <Indicadores />
+      ) : (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 }}>
+          <View style={st.cadeado}>
+            <Ionicons name="lock-closed" size={36} color={colors.primary} />
+          </View>
+          <Text style={st.h}>Área restrita</Text>
+          <Text style={{ color: colors.textSec, textAlign: 'center', lineHeight: 20 }}>
+            Os indicadores de vendas, custos e lucro são visíveis apenas para administradores.
+          </Text>
+        </View>
+      )}
     </>
   );
 }
 
-function Bloqueio({ criar }: { criar: boolean }) {
-  const { definirPin, liberarAdmin } = useDados();
-  const [pin, setPin] = useState('');
-  const [conf, setConf] = useState('');
-  const [erro, setErro] = useState('');
-
-  const enviar = async () => {
-    setErro('');
-    if (criar) {
-      if (!/^\d{4,6}$/.test(pin)) return setErro('O PIN deve ter de 4 a 6 números.');
-      if (pin !== conf) return setErro('Os PINs não conferem.');
-      await definirPin(pin);
-    } else if (!liberarAdmin(pin)) {
-      setErro('PIN incorreto.');
-      setPin('');
-    }
-  };
-
-  return (
-    <ScrollView contentContainerStyle={{ padding: 24, alignItems: 'center', gap: 16 }} keyboardShouldPersistTaps="handled">
-      <View style={st.cadeado}>
-        <Ionicons name="lock-closed" size={36} color={colors.primary} />
-      </View>
-      <Text style={st.h}>{criar ? 'Crie o PIN do administrador' : 'Área restrita'}</Text>
-      <Text style={{ color: colors.textSec, textAlign: 'center', lineHeight: 20 }}>
-        {criar
-          ? 'Os indicadores de vendas, custos, lucro e cancelamentos ficam visíveis apenas com este PIN.'
-          : 'Digite o PIN do administrador para ver os indicadores de vendas.'}
-      </Text>
-      <TextInput value={pin} onChangeText={setPin} placeholder="PIN" placeholderTextColor={colors.textMuted} keyboardType="number-pad" secureTextEntry maxLength={6} style={st.pin} onSubmitEditing={enviar} autoFocus />
-      {criar && (
-        <TextInput value={conf} onChangeText={setConf} placeholder="Confirme o PIN" placeholderTextColor={colors.textMuted} keyboardType="number-pad" secureTextEntry maxLength={6} style={st.pin} onSubmitEditing={enviar} />
-      )}
-      {!!erro && <Text style={{ color: colors.critical, fontWeight: '600' }}>{erro}</Text>}
-      <Botao label={criar ? 'Criar PIN e entrar' : 'Entrar'} icon="key-outline" onPress={enviar} style={{ alignSelf: 'stretch' }} />
-    </ScrollView>
-  );
-}
-
 function Indicadores() {
-  const { vendas, produtos, ordens, bloquearAdmin } = useDados();
+  const { vendas, produtos: todos, ordens, loja } = useDados();
+  const produtos = todos.filter((p) => !p.excluido);
   const [periodo, setPeriodo] = useState<Periodo>('mes');
 
   const dados = useMemo(() => {
@@ -138,6 +112,7 @@ function Indicadores() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <Text style={{ color: colors.textSec, marginBottom: 8 }}>{loja.nome}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Chips<Periodo>
           opcoes={[
@@ -232,8 +207,6 @@ function Indicadores() {
           <Text style={{ color: colors.textSec, marginTop: 8 }}>Nenhum produto com estoque baixo.</Text>
         )}
       </Card>
-
-      <Botao label="Bloquear painel" variante="secundario" icon="lock-closed-outline" onPress={() => { bloquearAdmin(); router.back(); }} style={{ marginTop: 24 }} />
     </ScrollView>
   );
 }
@@ -252,18 +225,6 @@ function Kpi({ icon, label, valor, sub, destaque }: { icon: keyof typeof Ionicon
 const st = StyleSheet.create({
   cadeado: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginTop: 20 },
   h: { color: colors.text, fontSize: 20, fontWeight: '800' },
-  pin: {
-    alignSelf: 'stretch',
-    textAlign: 'center',
-    fontSize: 26,
-    letterSpacing: 10,
-    color: colors.text,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingVertical: 14,
-  },
   kpis: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
   kpi: { width: '48%', flexGrow: 1, backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 4 },
   kpiValor: { color: colors.text, fontSize: 20, fontWeight: '800', fontVariant: ['tabular-nums'], marginTop: 4 },

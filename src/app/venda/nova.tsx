@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Botao, Busca, Campo, Card, Chips, Rotulo, s as ui, Titulo, toque } from '../../components/ui';
-import { CATEGORIA, fmtMoeda, PAGAMENTO, parseMoeda, uid } from '../../lib/format';
+import { CATEGORIA, fmtMoeda, PAGAMENTO, parseMoeda } from '../../lib/format';
+import { itensSemEstoque } from '../../lib/estoque';
 import { useDados } from '../../lib/store';
 import type { FormaPagamento, ItemVenda } from '../../lib/types';
 import { colors, radius } from '../../theme';
@@ -19,13 +20,11 @@ export default function NovaVenda() {
   const [nomeNovo, setNomeNovo] = useState('');
   const [garantia, setGarantia] = useState(90);
   const [obs, setObs] = useState('');
-  const [avulsoNome, setAvulsoNome] = useState('');
-  const [avulsoValor, setAvulsoValor] = useState('');
 
   const disponiveis = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return produtos
-      .filter((p) => p.ativo && (!q || `${p.nome} ${p.marca} ${p.sku}`.toLowerCase().includes(q)))
+      .filter((p) => p.ativo && !p.excluido && (!q || `${p.nome} ${p.marca} ${p.sku}`.toLowerCase().includes(q)))
       .slice(0, q ? 30 : 8);
   }, [produtos, busca]);
 
@@ -38,10 +37,17 @@ export default function NovaVenda() {
   const adicionar = (pid: string) => {
     const p = produtos.find((x) => x.id === pid);
     if (!p) return;
-    toque();
-    if (qtdNoCarrinho(pid) >= p.estoque) {
-      Alert.alert('Estoque', `Só há ${p.estoque} unidade(s) de ${p.nome} em estoque.`);
+    // nunca coloca no carrinho mais do que há em estoque
+    if (p.estoque <= 0) {
+      return Alert.alert('Sem estoque', `${p.nome} está sem estoque e não pode ser vendido. Adicione o estoque antes de vender.`, [
+        { text: 'Voltar', style: 'cancel' },
+        { text: 'Adicionar estoque', onPress: () => router.push({ pathname: '/produtos/editar', params: { id: p.id } }) },
+      ]);
     }
+    if (qtdNoCarrinho(pid) >= p.estoque) {
+      return Alert.alert('Estoque insuficiente', `Só há ${p.estoque} unidade(s) de ${p.nome} em estoque.`);
+    }
+    toque();
     setItens((l) =>
       l.some((i) => i.produtoId === pid)
         ? l.map((i) => (i.produtoId === pid ? { ...i, qtd: i.qtd + 1 } : i))
@@ -50,27 +56,27 @@ export default function NovaVenda() {
     if (p.usado) setGarantia(90);
   };
 
-  const mudarQtd = (idx: number, delta: number) =>
+  const mudarQtd = (idx: number, delta: number) => {
+    const item = itens[idx];
+    const p = produtos.find((x) => x.id === item?.produtoId);
+    if (delta > 0 && (!p || item.qtd + delta > p.estoque)) {
+      return Alert.alert('Estoque insuficiente', `Só há ${p?.estoque ?? 0} unidade(s) de ${item?.nome} em estoque.`);
+    }
     setItens((l) => l.map((i, k) => (k === idx ? { ...i, qtd: i.qtd + delta } : i)).filter((i) => i.qtd > 0));
-
-  const addAvulso = () => {
-    if (!avulsoNome.trim()) return;
-    setItens((l) => [
-      ...l,
-      { produtoId: 'avulso-' + uid(), nome: avulsoNome.trim(), categoria: 'acessorio', qtd: 1, precoUnit: parseMoeda(avulsoValor), custoUnit: 0 },
-    ]);
-    setAvulsoNome('');
-    setAvulsoValor('');
   };
 
   const finalizar = async () => {
     if (!itens.length) return Alert.alert('Venda vazia', 'Adicione pelo menos um produto.');
+    const semEstoque = itensSemEstoque(itens, produtos);
+    if (semEstoque.length) return Alert.alert('Estoque insuficiente', `Não há estoque suficiente de: ${semEstoque.join(', ')}.`);
     let cid = clienteId;
     if (!cid && nomeNovo.trim()) {
       const c = await salvarCliente({ nome: nomeNovo.trim(), telefone: '', email: '', endereco: '', notas: '' });
       cid = c.id;
     }
-    const v = await registrarVenda({
+    let v;
+    try {
+      v = await registrarVenda({
       data: new Date().toISOString(),
       clienteId: cid,
       itens,
@@ -80,7 +86,10 @@ export default function NovaVenda() {
       parcelas: pagamento === 'parcelado' ? parcelas : 1,
       garantiaDias: garantia,
       observacoes: obs.trim(),
-    });
+      });
+    } catch (e) {
+      return Alert.alert('Venda não registrada', String((e as Error).message));
+    }
     router.replace({ pathname: '/venda/[id]', params: { id: v.id, nova: '1' } });
   };
 
@@ -93,14 +102,14 @@ export default function NovaVenda() {
           {disponiveis.map((p) => {
             const noCarrinho = qtdNoCarrinho(p.id);
             return (
-              <Pressable key={p.id} onPress={() => adicionar(p.id)} style={({ pressed }) => [st.prod, pressed && { opacity: 0.7 }]}>
+              <Pressable key={p.id} onPress={() => adicionar(p.id)} style={({ pressed }) => [st.prod, pressed && { opacity: 0.7 }, p.estoque <= 0 && { opacity: 0.45 }]}>
                 <Ionicons name={CATEGORIA[p.categoria].icon} size={20} color={colors.primary} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.text, fontWeight: '600' }} numberOfLines={1}>
                     {p.nome}
                   </Text>
                   <Text style={{ color: p.estoque <= 0 ? colors.critical : colors.textSec, fontSize: 12 }}>
-                    {p.estoque <= 0 ? 'Sem estoque' : `${p.estoque} em estoque`}
+                    {p.estoque <= 0 ? 'Sem estoque · toque para adicionar' : `${p.estoque} em estoque`}
                     {p.usado ? ' · seminovo' : ''}
                   </Text>
                 </View>
@@ -125,13 +134,6 @@ export default function NovaVenda() {
           )}
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-          <TextInput value={avulsoNome} onChangeText={setAvulsoNome} placeholder="Item avulso (ex.: console usado)" placeholderTextColor={colors.textMuted} style={[ui.input, { flex: 2 }]} />
-          <TextInput value={avulsoValor} onChangeText={setAvulsoValor} placeholder="R$" keyboardType="decimal-pad" placeholderTextColor={colors.textMuted} style={[ui.input, { flex: 1 }]} />
-          <Pressable onPress={addAvulso} style={st.btnAdd}>
-            <Ionicons name="add" size={22} color={colors.bg} />
-          </Pressable>
-        </View>
 
         <Titulo>Carrinho</Titulo>
         <Card>
@@ -217,7 +219,6 @@ const st = StyleSheet.create({
     borderColor: colors.border,
   },
   add: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  btnAdd: { width: 46, borderRadius: radius.sm, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   linha: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
   passo: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },

@@ -95,6 +95,24 @@ export interface Produto {
   usado: boolean;
   ativo: boolean;
   criadoEm: string;
+  /** Exclusão lógica: some das listas e das vendas, mas o histórico continua apontando para ele */
+  excluido?: boolean;
+  excluidoEm?: string | null;
+}
+
+/** Usuário da loja (tabela assistencia_usuarios) */
+export interface Membro {
+  id: string;
+  email: string;
+  nome: string;
+  /** true = administrador; false = usuário comum */
+  admin: boolean;
+  ativo: boolean;
+  /** Dono da loja (não pode ser alterado nem removido) */
+  dono: boolean;
+  /** Já entrou no app e aceitou fazer parte da loja */
+  aceito: boolean;
+  criadoEm: string;
 }
 
 export interface ItemVenda {

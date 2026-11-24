@@ -1,5 +1,12 @@
 import { fmtData, uid } from './format';
-import type { Cliente, ModeloEtiqueta, OrdemServico, TamanhoEtiqueta } from './types';
+import type { Cliente, DadosLoja, ModeloEtiqueta, OrdemServico, TamanhoEtiqueta } from './types';
+
+/** Modelo pronto para imprimir: sem logo próprio, usa o logo da empresa; sem título, o nome da empresa. */
+export const comLoja = (m: ModeloEtiqueta, loja: DadosLoja): ModeloEtiqueta => ({
+  ...m,
+  logo: m.logo ?? loja.logo ?? null,
+  titulo: m.titulo || loja.nome,
+});
 
 export const TAMANHOS: Record<TamanhoEtiqueta, { w: number; h: number; label: string }> = {
   '50x30': { w: 50, h: 30, label: '50 × 30 mm' },

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, useWindowDimensions, View } from 'react-native';
 import { EtiquetaPreview } from '../../components/EtiquetaPreview';
 import { Botao, Campo, Card, Chips, Rotulo, Titulo } from '../../components/ui';
-import { modeloPadrao, novoModelo, TAMANHOS } from '../../lib/etiqueta';
+import { comLoja, modeloPadrao, novoModelo, TAMANHOS } from '../../lib/etiqueta';
 import { escolherImagem } from '../../lib/imagens';
 import { useDados } from '../../lib/store';
 import type { ModeloEtiqueta, OrdemServico, TamanhoEtiqueta } from '../../lib/types';
@@ -72,7 +72,7 @@ export default function EditarModelo() {
           <EtiquetaPreview
             o={EXEMPLO}
             c={{ id: '', nome: 'Carla Mendes', telefone: '(81) 99999-0000', email: '', endereco: '', notas: '', criadoEm: '' }}
-            m={m}
+            m={comLoja(m, loja)}
             contato={contato}
             largura={Math.min(width - 64, 420)}
           />
@@ -81,7 +81,7 @@ export default function EditarModelo() {
 
         <Titulo>Imagens</Titulo>
         <Card style={{ gap: 14 }}>
-          <SeletorImagem titulo="Logo" desc="PNG com fundo transparente fica melhor" valor={m.logo} onEscolher={() => pegar('logo')} onRemover={() => set('logo', null)} />
+          <SeletorImagem titulo="Logo próprio (opcional)" desc={loja.logo ? 'Sem logo próprio, usa o logo da empresa' : 'PNG com fundo transparente fica melhor'} valor={m.logo} onEscolher={() => pegar('logo')} onRemover={() => set('logo', null)} />
           <SeletorImagem titulo="Imagem de fundo" desc="Foto ou arte que fica atrás do texto" valor={m.fundo} onEscolher={() => pegar('fundo')} onRemover={() => set('fundo', null)} />
           {m.fundo && (
             <>

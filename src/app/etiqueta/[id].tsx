@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 import { EtiquetaPreview } from '../../components/EtiquetaPreview';
 import { Botao, Card, Chips, Rotulo, toque, Vazio } from '../../components/ui';
 import { celularFormatado, CONTATO } from '../../lib/contato';
-import { htmlEtiqueta, mmParaPt, TAMANHOS } from '../../lib/etiqueta';
+import { comLoja, htmlEtiqueta, mmParaPt, TAMANHOS } from '../../lib/etiqueta';
 import { compartilharPdf, imprimir } from '../../lib/imprimir';
 import { useDados } from '../../lib/store';
 import { colors, radius } from '../../theme';
@@ -19,7 +19,7 @@ export default function ImprimirEtiqueta() {
   const o = ordens.find((x) => x.id === id);
   if (!o) return <Vazio icon="help-circle-outline" texto="Ordem de serviço não encontrada." />;
 
-  const m = modelos.find((x) => x.id === modeloId) ?? modelos[0];
+  const m = comLoja(modelos.find((x) => x.id === modeloId) ?? modelos[0], loja);
   const c = cliente(o.clienteId);
   const contato = `${loja.instagram || '@' + CONTATO.instagram} · ${loja.telefone || celularFormatado()}`;
   const tam = TAMANHOS[m.tamanho];

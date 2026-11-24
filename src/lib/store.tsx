@@ -2,9 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useAuth } from './auth';
+import { useConta } from './conta';
+import { itensSemEstoque } from './estoque';
 import { gerarExemplo } from './exemplo';
 import {
-  carregarDaNuvem, enviarDiferencas, enviarTudo, removerModeloDaNuvem, salvarLojaNaNuvem, salvarModeloNaNuvem,
+  carregarDaNuvem, definirDono, enviarDiferencas, enviarTudo, removerModeloDaNuvem, salvarLojaNaNuvem, salvarModeloNaNuvem,
 } from './nuvem';
 import { mensagemErro } from './supabase';
 import { fmtHora, STATUS, TIPO_AG, uid } from './format';
@@ -18,8 +20,7 @@ import type { Agendamento, AppData, Cliente, DadosLoja, ModeloEtiqueta, OrdemSer
 const CHAVE = '@assistencia-ml/dados-v1';
 const CHAVE_MODELOS = '@assistencia-ml/etiquetas-v1';
 const CHAVE_LOJA = '@assistencia-ml/loja-v1';
-// Continuam no aparelho: o PIN do administrador e os ids dos avisos agendados neste aparelho.
-const CHAVE_PIN = '@assistencia-ml/admin-pin';
+// Continuam no aparelho: os ids dos avisos agendados neste aparelho.
 const CHAVE_AVISOS = '@assistencia-ml/avisos-v1';
 const VAZIO: AppData = {
   clientes: [], ordens: [], agendamentos: [], produtos: [], vendas: [], proximoNumero: 1, proximaVenda: 1,
@@ -84,12 +85,8 @@ interface Ctx extends AppData {
   // Loja (cabeçalho das fichas)
   loja: DadosLoja;
   salvarLoja: (l: DadosLoja) => Promise<void>;
-  // Administrador
-  temPin: boolean;
-  adminLiberado: boolean;
-  definirPin: (pin: string) => Promise<void>;
-  liberarAdmin: (pin: string) => boolean;
-  bloquearAdmin: () => void;
+  /** Usuário logado é administrador (vem do cadastro da equipe) */
+  ehAdmin: boolean;
 }
 
 const DataContext = createContext<Ctx | null>(null);
@@ -100,11 +97,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const ref = useRef(dados);
   const [modelos, setModelos] = useState<ModeloEtiqueta[]>([modeloPadrao()]);
   const modelosRef = useRef(modelos);
-  const [pin, setPin] = useState<string | null>(null);
-  const [adminLiberado, setAdminLiberado] = useState(false);
   const [loja, setLoja] = useState<DadosLoja>(LOJA_PADRAO);
   const [erroCarga, setErroCarga] = useState('');
   const { user } = useAuth();
+  const { dono, ehAdmin } = useConta();
+  // gravações vão para a loja do usuário (para a equipe, a conta do dono)
+  useEffect(() => definirDono(dono), [dono]);
   // fila: as gravações na base acontecem uma de cada vez, na ordem em que foram feitas
   const fila = useRef<Promise<void>>(Promise.resolve());
 
@@ -118,9 +116,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const recarregar = useCallback(async () => {
     try {
-      const [nuvem, txtAvisos, txtPin] = await Promise.all([
-        carregarDaNuvem(), AsyncStorage.getItem(CHAVE_AVISOS), AsyncStorage.getItem(CHAVE_PIN),
-      ]);
+      const [nuvem, txtAvisos] = await Promise.all([carregarDaNuvem(), AsyncStorage.getItem(CHAVE_AVISOS)]);
       const avisos: Record<string, string> = txtAvisos ? JSON.parse(txtAvisos) : {};
       const d = nuvem.dados;
       d.ordens = d.ordens.map((o) => (avisos[o.id] ? { ...o, notificationId: avisos[o.id] } : o));
@@ -131,7 +127,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       modelosRef.current = m;
       setModelos(m);
       setLoja({ ...LOJA_PADRAO, ...(nuvem.loja ?? {}) });
-      setPin(txtPin);
       setErroCarga('');
     } catch (e) {
       setErroCarga(mensagemErro(e));
@@ -189,7 +184,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     // o estado só muda depois da resposta da base (dentro do .then), não durante o effect
     Promise.resolve().then(recarregar).then(oferecerDadosLocais);
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, dono]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const falhaAoSalvar = (e: unknown) => {
     Alert.alert('Não foi possível salvar', mensagemErro(e));
@@ -214,6 +209,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const salvarLoja = async (l: DadosLoja) => {
+    if (!ehAdmin) return; // nome e logo da empresa: somente admin
     setLoja(l);
     if (!user) return;
     try {
@@ -221,18 +217,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       falhaAoSalvar(e);
     }
-  };
-
-  const definirPin = async (novo: string) => {
-    setPin(novo);
-    setAdminLiberado(true);
-    await AsyncStorage.setItem(CHAVE_PIN, novo).catch(() => {});
-  };
-
-  const liberarAdmin = (tentativa: string) => {
-    const ok = !!pin && tentativa === pin;
-    if (ok) setAdminLiberado(true);
-    return ok;
   };
 
   // Aplica a alteração na tela na hora e envia para a base só o que mudou.
@@ -363,11 +347,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return final;
   };
 
+  // Exclusão lógica (somente admin): o produto some das listas e das vendas, mas continua na base
   const removerProduto = async (id: string) => {
-    gravar((d) => ({ ...d, produtos: d.produtos.filter((p) => p.id !== id) }));
+    if (!ehAdmin) throw new Error('Somente o administrador pode excluir produtos.');
+    const agora = new Date().toISOString();
+    gravar((d) => ({
+      ...d,
+      produtos: d.produtos.map((p) => (p.id === id ? { ...p, excluido: true, excluidoEm: agora, ativo: false } : p)),
+    }));
   };
 
   const registrarVenda: Ctx['registrarVenda'] = async (v) => {
+    // nunca vende sem estoque
+    const faltam = itensSemEstoque(v.itens, ref.current.produtos);
+    if (faltam.length) throw new Error(`Não há estoque suficiente de: ${faltam.join(', ')}.`);
     const venda: Venda = { ...v, id: uid(), numero: ref.current.proximaVenda, status: 'concluida' };
     gravar((d) => ({
       ...d,
@@ -397,12 +390,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const carregarExemplo = async () => {
+    if (!ehAdmin) return;
     const ex = gerarExemplo();
     for (const a of ex.agendamentos) a.notificationId = await avisoDoAgendamento(a);
     gravar(() => ex);
   };
 
   const apagarTudo = async () => {
+    if (!ehAdmin) return;
     for (const o of ref.current.ordens) await cancelarAviso(o.notificationId);
     for (const a of ref.current.agendamentos) await cancelarAviso(a.notificationId);
     gravar(() => VAZIO);
@@ -435,14 +430,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       removerModelo,
       loja,
       salvarLoja,
-      temPin: !!pin,
-      adminLiberado,
-      definirPin,
-      liberarAdmin,
-      bloquearAdmin: () => setAdminLiberado(false),
+      ehAdmin,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dados, carregado, erroCarga, modelos, pin, adminLiberado, loja],
+    [dados, carregado, erroCarga, modelos, ehAdmin, loja],
   );
 
   return <DataContext.Provider value={valor}>{children}</DataContext.Provider>;

@@ -11,8 +11,16 @@ import type { DadosLoja } from '../lib/types';
 import { colors, radius } from '../theme';
 
 export default function Loja() {
-  const { loja, salvarLoja } = useDados();
+  const { loja, salvarLoja, ehAdmin } = useDados();
   const [l, setL] = useState<DadosLoja>(loja);
+  if (!ehAdmin) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 }}>
+        <Ionicons name="lock-closed" size={40} color={colors.textSec} />
+        <Text style={{ color: colors.textSec, textAlign: 'center' }}>Somente o administrador pode alterar os dados da empresa.</Text>
+      </View>
+    );
+  }
   const set = <K extends keyof DadosLoja>(k: K, v: DadosLoja[K]) => setL((x) => ({ ...x, [k]: v }));
 
   const pegarLogo = async () => {
@@ -26,13 +34,13 @@ export default function Loja() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Stack.Screen options={{ title: 'Dados da loja e fichas' }} />
+      <Stack.Screen options={{ title: 'Empresa e documentos' }} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <Text style={{ color: colors.textSec, lineHeight: 20 }}>
-          Estes dados aparecem no cabeçalho do orçamento, das fichas de entrada, saída, envio p/ assistência e da ordem de venda.
+          O nome e o logo da empresa aparecem em todos os documentos (orçamento, fichas de entrada, saída e envio, ordem de venda), no relatório de indicadores e nas etiquetas que não têm logo próprio.
         </Text>
 
-        <Titulo>Logo</Titulo>
+        <Titulo>Logo da empresa</Titulo>
         <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <Pressable
             onPress={pegarLogo}
@@ -67,7 +75,7 @@ export default function Loja() {
 
         <Titulo>Cabeçalho</Titulo>
         <Card>
-          <Campo label="Nome da loja" value={l.nome} onChangeText={(t) => set('nome', t)} />
+          <Campo label="Nome da empresa" value={l.nome} onChangeText={(t) => set('nome', t)} />
           <Campo label="Slogan" value={l.slogan} onChangeText={(t) => set('slogan', t)} />
           <Campo label="Endereço" value={l.endereco} onChangeText={(t) => set('endereco', t)} />
           <Campo label="Telefone" value={l.telefone} onChangeText={(t) => set('telefone', t)} keyboardType="phone-pad" />

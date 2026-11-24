@@ -7,6 +7,12 @@ import { supabase } from './supabase';
 import type { Agendamento, AppData, Cliente, DadosLoja, ModeloEtiqueta, OrdemServico, Produto, Venda } from './types';
 
 type Linha = Record<string, unknown>;
+
+// Loja (conta dona) dos dados gravados. Para quem é da equipe, é a conta do dono, não a própria.
+let donoAtual: string | null = null;
+export function definirDono(id: string | null) {
+  donoAtual = id;
+}
 const num = (v: unknown) => Number(v) || 0;
 const vazioParaNull = (v: unknown) => (v === '' || v === undefined ? null : v);
 
@@ -58,11 +64,14 @@ const produtoDb = (p: Produto): Linha => ({
   id: p.id, nome: p.nome, categoria: p.categoria, marca: p.marca ?? '', sku: p.sku ?? '', custo: num(p.custo),
   preco: num(p.preco), estoque: Math.round(num(p.estoque)), estoque_minimo: Math.max(0, Math.round(num(p.estoqueMinimo))),
   usado: !!p.usado, ativo: p.ativo !== false, criado_em: p.criadoEm,
+  // só envia quando o campo existe (a coluna vem do script de equipe/exclusão lógica)
+  ...(p.excluido !== undefined ? { excluido: !!p.excluido, excluido_em: p.excluidoEm ?? null } : {}),
 });
 const produtoApp = (r: Linha): Produto => ({
   id: r.id as string, nome: r.nome as string, categoria: r.categoria as Produto['categoria'], marca: r.marca as string,
   sku: r.sku as string, custo: num(r.custo), preco: num(r.preco), estoque: r.estoque as number,
   estoqueMinimo: r.estoque_minimo as number, usado: r.usado as boolean, ativo: r.ativo as boolean, criadoEm: r.criado_em as string,
+  excluido: r.excluido === undefined ? undefined : !!r.excluido, excluidoEm: (r.excluido_em as string) ?? null,
 });
 
 const vendaDb = (v: Venda): Linha => ({
@@ -127,7 +136,7 @@ async function lerTabela(tabela: string, ordem: string, asc = false): Promise<Li
 
 async function enviar(tabela: string, linhas: Linha[]) {
   for (const parte of pedacos(linhas, 300)) {
-    const { error } = await supabase.from(tabela).upsert(parte);
+    const { error } = await supabase.from(tabela).upsert(donoAtual ? parte.map((l) => ({ ...l, owner_id: donoAtual })) : parte);
     if (error) throw error;
   }
 }
@@ -195,7 +204,7 @@ export async function removerModeloDaNuvem(id: string) {
   await apagar('assistencia_etiquetas', [id]);
 }
 export async function salvarLojaNaNuvem(l: DadosLoja, ownerId: string) {
-  const { error } = await supabase.from('assistencia_loja').upsert({ owner_id: ownerId, ...lojaDb(l) }, { onConflict: 'owner_id' });
+  const { error } = await supabase.from('assistencia_loja').upsert({ owner_id: donoAtual ?? ownerId, ...lojaDb(l) }, { onConflict: 'owner_id' });
   if (error) throw error;
 }
 

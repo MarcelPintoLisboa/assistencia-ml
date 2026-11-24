@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Badge, Botao, Busca, Chips, Fab, Vazio } from '../../components/ui';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Badge, Botao, Busca, Chips, Vazio } from '../../components/ui';
 import { CATEGORIA, fmtMoeda } from '../../lib/format';
 import { useDados } from '../../lib/store';
 import type { CategoriaProduto } from '../../lib/types';
@@ -11,7 +12,11 @@ import { colors, radius } from '../../theme';
 type Filtro = 'todos' | 'baixo' | CategoriaProduto;
 
 export default function Produtos() {
-  const { produtos, adminLiberado } = useDados();
+  const insets = useSafeAreaInsets();
+  const { produtos: todos, ehAdmin } = useDados();
+  // produtos excluídos (exclusão lógica) não aparecem
+  const produtos = useMemo(() => todos.filter((p) => !p.excluido), [todos]);
+  const baixos = produtos.filter((p) => p.ativo && p.estoque <= p.estoqueMinimo).length;
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todos');
 
@@ -24,9 +29,13 @@ export default function Produtos() {
   }, [produtos, busca, filtro]);
 
   return (
-    <View style={{ flex: 1 }}>
-      <Stack.Screen options={{ title: 'Produtos e estoque' }} />
-      <View style={{ padding: 16, paddingBottom: 0 }}>
+    <View style={{ flex: 1, paddingTop: insets.top + 12 }}>
+      <View style={{ paddingHorizontal: 16 }}>
+        <Text style={st.h1}>Produtos</Text>
+        <Botao label="Novo produto" icon="add" onPress={() => router.push('/produtos/editar')} style={{ marginBottom: 10 }} />
+        <Text style={{ color: baixos ? colors.warning : colors.textSec, marginBottom: 10 }}>
+          {produtos.length} produto(s){baixos ? ` · ${baixos} com estoque baixo` : ''}
+        </Text>
         <Busca value={busca} onChangeText={setBusca} placeholder="Buscar produto, marca ou SKU" />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12 }}>
@@ -60,9 +69,9 @@ export default function Produtos() {
                   {p.nome}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-                  <Badge label={`${p.estoque} un.`} color={baixo ? colors.warning : colors.primary} icon={baixo ? 'alert-circle' : 'cube-outline'} />
+                  <Badge label={p.estoque <= 0 ? 'Sem estoque' : `${p.estoque} un.`} color={p.estoque <= 0 ? colors.critical : baixo ? colors.warning : colors.primary} icon={baixo ? 'alert-circle' : 'cube-outline'} />
                   {p.usado && <Badge label="Seminovo" color={colors.textMuted} />}
-                  {adminLiberado && <Text style={{ color: colors.textSec, fontSize: 12 }}>Custo {fmtMoeda(p.custo)} · margem {margem}%</Text>}
+                  {ehAdmin && <Text style={{ color: colors.textSec, fontSize: 12 }}>Custo {fmtMoeda(p.custo)} · margem {margem}%</Text>}
                 </View>
               </View>
               <Text style={st.preco}>{fmtMoeda(p.preco)}</Text>
@@ -75,12 +84,12 @@ export default function Produtos() {
           </Vazio>
         }
       />
-      <Fab onPress={() => router.push('/produtos/editar')} />
     </View>
   );
 }
 
 const st = StyleSheet.create({
+  h1: { color: colors.text, fontSize: 26, fontWeight: '800', marginBottom: 12 },
   item: {
     flexDirection: 'row',
     alignItems: 'center',

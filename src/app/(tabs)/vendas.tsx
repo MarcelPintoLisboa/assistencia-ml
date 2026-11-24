@@ -10,7 +10,7 @@ import { colors, radius } from '../../theme';
 
 export default function Vendas() {
   const insets = useSafeAreaInsets();
-  const { vendas, produtos, cliente, adminLiberado } = useDados();
+  const { vendas, cliente, ehAdmin } = useDados();
   const [busca, setBusca] = useState('');
 
   const lista = useMemo(() => {
@@ -21,23 +21,23 @@ export default function Vendas() {
   }, [vendas, busca, cliente]);
 
   const hoje = vendas.filter((v) => v.status === 'concluida' && mesmoDia(new Date(v.data), new Date()));
-  const baixo = produtos.filter((p) => p.ativo && p.estoque <= p.estoqueMinimo).length;
 
   return (
     <View style={{ flex: 1, paddingTop: insets.top + 12 }}>
       <View style={{ paddingHorizontal: 16 }}>
         <Text style={st.h1}>Vendas</Text>
         <Botao label="Nova venda" icon="cart" onPress={() => router.push('/venda/nova')} style={{ marginBottom: 10 }} />
-        <View style={st.atalhos}>
-          <Atalho icon="cube-outline" label="Produtos" sub={baixo ? `${baixo} com estoque baixo` : `${produtos.length} itens`} alerta={baixo > 0} onPress={() => router.push('/produtos')} />
-          <Atalho icon={adminLiberado ? 'stats-chart' : 'lock-closed-outline'} label="Indicadores" sub="Somente admin" onPress={() => router.push('/admin')} />
-        </View>
+        {ehAdmin && (
+          <View style={st.atalhos}>
+            <Atalho icon="stats-chart" label="Indicadores de vendas" sub="Faturamento, lucro e mais vendidos" onPress={() => router.push('/admin')} />
+          </View>
+        )}
         <View style={st.hoje}>
           <Ionicons name="today-outline" size={18} color={colors.primary} />
           <Text style={{ color: colors.text, flex: 1 }}>
             Hoje: <Text style={{ fontWeight: '800' }}>{hoje.length}</Text> venda(s)
           </Text>
-          {adminLiberado && <Text style={{ color: colors.primary, fontWeight: '800' }}>{fmtMoeda(hoje.reduce((t, v) => t + v.total, 0))}</Text>}
+          {ehAdmin && <Text style={{ color: colors.primary, fontWeight: '800' }}>{fmtMoeda(hoje.reduce((t, v) => t + v.total, 0))}</Text>}
         </View>
         <Busca value={busca} onChangeText={setBusca} placeholder="Buscar por nº, cliente ou produto" />
       </View>

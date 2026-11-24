@@ -5,7 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import Login from '../components/Login';
+import { EstadoConta } from '../components/EstadoConta';
 import { AuthProvider, useAuth } from '../lib/auth';
+import { ContaProvider, useConta } from '../lib/conta';
 import { prepararNotificacoes } from '../lib/notifications';
 import { DataProvider, useDados } from '../lib/store';
 import { colors } from '../theme';
@@ -53,13 +55,24 @@ function Centro({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Sem login: tela de entrar. Com login: carrega os dados da base e mostra o app.
+// Sem login: tela de entrar. Com login: descobre a loja do usuário e se ele é admin, depois carrega os dados.
 function Portao() {
   const { pronto, user } = useAuth();
   if (!pronto) return <Centro><ActivityIndicator color={colors.primary} size="large" /></Centro>;
   if (!user) return <Login />;
   return (
-    <DataProvider>
+    <ContaProvider key={user.id}>
+      <PortaoConta />
+    </ContaProvider>
+  );
+}
+
+function PortaoConta() {
+  const conta = useConta();
+  if (!conta.pronta) return <Centro><ActivityIndicator color={colors.primary} size="large" /></Centro>;
+  if (conta.erro || conta.convite || !conta.dono) return <EstadoConta />;
+  return (
+    <DataProvider key={conta.dono}>
       <Carregamento />
     </DataProvider>
   );
@@ -113,13 +126,14 @@ function Carregamento() {
           <Stack.Screen name="clientes" options={{ title: 'Clientes' }} />
           <Stack.Screen name="venda/nova" options={{ title: 'Nova venda', presentation: 'modal' }} />
           <Stack.Screen name="venda/[id]" options={{ title: 'Venda' }} />
-          <Stack.Screen name="produtos/index" options={{ title: 'Produtos e estoque' }} />
           <Stack.Screen name="produtos/editar" options={{ title: 'Produto', presentation: 'modal' }} />
           <Stack.Screen name="admin" options={{ title: 'Painel do administrador' }} />
           <Stack.Screen name="etiqueta/[id]" options={{ title: 'Etiqueta' }} />
           <Stack.Screen name="etiquetas/index" options={{ title: 'Modelos de etiqueta' }} />
           <Stack.Screen name="etiquetas/editar" options={{ title: 'Personalizar etiqueta' }} />
-          <Stack.Screen name="loja" options={{ title: 'Dados da loja' }} />
+          <Stack.Screen name="loja" options={{ title: 'Empresa e documentos' }} />
+          <Stack.Screen name="usuarios/index" options={{ title: 'Usuários' }} />
+          <Stack.Screen name="usuarios/novo" options={{ title: 'Novo usuário', presentation: 'modal' }} />
         </Stack>
   );
 }

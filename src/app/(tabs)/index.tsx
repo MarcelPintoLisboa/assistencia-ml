@@ -17,7 +17,7 @@ type Periodo = '7d' | '30d' | '6m';
 
 export default function Painel() {
   const insets = useSafeAreaInsets();
-  const { ordens, agendamentos, cliente, alternarAgendamento, carregarExemplo, carregado } = useDados();
+  const { ordens, agendamentos, cliente, alternarAgendamento, carregarExemplo, carregado, ehAdmin, loja } = useDados();
   const [periodo, setPeriodo] = useState<Periodo>('7d');
   const agora = new Date();
 
@@ -110,11 +110,17 @@ export default function Painel() {
           style={StyleSheet.absoluteFill}
         />
         <View style={st.heroTopo}>
-          <View style={st.logo}>
-            <Ionicons name="build" size={18} color={colors.bg} />
-          </View>
+          {loja.logo ? (
+            <View style={[st.logo, { backgroundColor: '#fff', padding: 2, overflow: 'hidden' }]}>
+              <Image source={{ uri: loja.logo }} style={{ width: '100%', height: '100%' }} contentFit="contain" />
+            </View>
+          ) : (
+            <View style={st.logo}>
+              <Ionicons name="build" size={18} color={colors.bg} />
+            </View>
+          )}
           <View style={{ flex: 1 }}>
-            <Text style={st.marca}>ASSISTÊNCIA ML</Text>
+            <Text style={st.marca} numberOfLines={1}>{(loja.nome || 'Assistência ML').toUpperCase()}</Text>
             <Text style={st.nicho}>DRONES & VIDEO GAMES</Text>
           </View>
           <Pressable onPress={() => router.push('/ajustes')} hitSlop={10} style={st.btnContato} accessibilityLabel="Contatos">
@@ -139,7 +145,7 @@ export default function Painel() {
           <Card style={{ marginTop: 8 }}>
             <Vazio icon="rocket-outline" texto="Bem-vindo! Cadastre sua primeira ordem de serviço ou carregue dados de exemplo para conhecer o app.">
               <Botao label="Nova ordem de serviço" icon="add" onPress={() => router.push('/ordem/nova')} style={{ alignSelf: 'stretch' }} />
-              <Botao label="Carregar exemplo" variante="secundario" icon="sparkles-outline" onPress={carregarExemplo} style={{ alignSelf: 'stretch' }} />
+              {ehAdmin && <Botao label="Carregar exemplo" variante="secundario" icon="sparkles-outline" onPress={carregarExemplo} style={{ alignSelf: 'stretch' }} />}
             </Vazio>
           </Card>
         ) : (

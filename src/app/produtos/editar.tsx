@@ -11,7 +11,7 @@ const valorTxt = (n: number | undefined) => (n ? fmtMoeda(n).replace('R$ ', '') 
 
 export default function EditarProduto() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { produtos, salvarProduto, removerProduto, adminLiberado } = useDados();
+  const { produtos, salvarProduto, removerProduto, ehAdmin } = useDados();
   const p = id ? produtos.find((x) => x.id === id) : undefined;
 
   const [nome, setNome] = useState(p?.nome ?? '');
@@ -25,8 +25,8 @@ export default function EditarProduto() {
   const [usado, setUsado] = useState(p?.usado ?? false);
   const [ativo, setAtivo] = useState(p?.ativo ?? true);
 
-  // Funcionário (sem PIN) pode cadastrar, mas custo só aparece/edita para o admin.
-  const podeVerCusto = adminLiberado || !p;
+  // Usuário comum pode cadastrar, mas o custo só aparece/edita para o admin.
+  const podeVerCusto = ehAdmin || !p;
   const nPreco = parseMoeda(preco);
   const nCusto = parseMoeda(custo);
 
@@ -40,8 +40,8 @@ export default function EditarProduto() {
       sku: sku.trim(),
       custo: podeVerCusto ? nCusto : p?.custo ?? 0,
       preco: nPreco,
-      estoque: parseInt(estoque, 10) || 0,
-      estoqueMinimo: parseInt(minimo, 10) || 0,
+      estoque: Math.max(0, parseInt(estoque, 10) || 0),
+      estoqueMinimo: Math.max(0, parseInt(minimo, 10) || 0),
       usado,
       ativo,
     });
@@ -50,13 +50,17 @@ export default function EditarProduto() {
 
   const excluir = () => {
     const fazer = async () => {
-      await removerProduto(p!.id);
-      router.back();
+      try {
+        await removerProduto(p!.id);
+        router.back();
+      } catch (err) {
+        Alert.alert('Não foi possível excluir', String((err as Error).message));
+      }
     };
     if (Platform.OS === 'web') {
       if (globalThis.confirm?.('Excluir este produto?')) fazer();
     } else {
-      Alert.alert('Excluir produto', 'O histórico de vendas é mantido.', [
+      Alert.alert('Excluir produto', 'O produto sai das listas e não pode mais ser vendido. O histórico de vendas é mantido.', [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Excluir', style: 'destructive', onPress: fazer },
       ]);
@@ -117,7 +121,7 @@ export default function EditarProduto() {
           {toggle('Disponível para venda', ativo, setAtivo)}
         </Card>
         <Botao label="Salvar produto" icon="checkmark" onPress={salvar} style={{ marginTop: 20 }} />
-        {p && adminLiberado && <Botao label="Excluir produto" variante="perigo" icon="trash-outline" onPress={excluir} style={{ marginTop: 10 }} />}
+        {p && ehAdmin && <Botao label="Excluir produto" variante="perigo" icon="trash-outline" onPress={excluir} style={{ marginTop: 10 }} />}
       </ScrollView>
     </KeyboardAvoidingView>
   );
