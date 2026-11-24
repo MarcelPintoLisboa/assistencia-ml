@@ -37,8 +37,8 @@ let janela = null;
 
 function criarJanela() {
   janela = new BrowserWindow({
-    width: 1180,
-    height: 820,
+    width: 1366,
+    height: 860,
     minWidth: 380,
     minHeight: 600,
     backgroundColor: '#050B1A',
@@ -55,6 +55,16 @@ function criarJanela() {
     },
   });
   janela.once('ready-to-show', () => janela.show());
+  // barras de rolagem finas e escuras, no tema do app (as do Windows são brancas)
+  janela.webContents.on('did-finish-load', () => {
+    janela.webContents.insertCSS(`
+      ::-webkit-scrollbar { width: 10px; height: 10px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #1E2A44; border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+      ::-webkit-scrollbar-thumb:hover { background: #2B3B5E; background-clip: padding-box; }
+      ::-webkit-scrollbar-corner { background: transparent; }
+    `);
+  });
 
   // Links externos (WhatsApp, Instagram, e-mail, telefone) abrem no navegador / app padrão
   janela.webContents.setWindowOpenHandler(({ url }) => {

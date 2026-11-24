@@ -3,13 +3,16 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Badge, Botao, Busca, Vazio } from '../../components/ui';
+import { Badge, Botao, Busca, CabecalhoTela, Vazio } from '../../components/ui';
 import { CATEGORIA, fmtDataHora, fmtMoeda, mesmoDia, PAGAMENTO } from '../../lib/format';
+import { useDesktop, useGrade } from '../../lib/desktop';
 import { useDados } from '../../lib/store';
 import { colors, radius } from '../../theme';
 
 export default function Vendas() {
   const insets = useSafeAreaInsets();
+  const g = useGrade();
+  const desktop = useDesktop();
   const { vendas, cliente, ehAdmin } = useDados();
   const [busca, setBusca] = useState('');
 
@@ -23,10 +26,9 @@ export default function Vendas() {
   const hoje = vendas.filter((v) => v.status === 'concluida' && mesmoDia(new Date(v.data), new Date()));
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top + 12 }}>
-      <View style={{ paddingHorizontal: 16 }}>
-        <Text style={st.h1}>Vendas</Text>
-        <Botao label="Nova venda" icon="cart" onPress={() => router.push('/venda/nova')} style={{ marginBottom: 10 }} />
+    <View style={{ flex: 1, paddingTop: desktop ? 24 : insets.top + 12 }}>
+      <View style={g.conteudo}>
+        <CabecalhoTela titulo="Vendas" botao={{ label: desktop ? 'Nova venda (F3)' : 'Nova venda', icon: 'cart', onPress: () => router.push('/venda/nova') }} />
         {ehAdmin && (
           <View style={st.atalhos}>
             <Atalho icon="stats-chart" label="Indicadores de vendas" sub="Faturamento, lucro e mais vendidos" onPress={() => router.push('/admin')} />
@@ -42,12 +44,14 @@ export default function Vendas() {
         <Busca value={busca} onChangeText={setBusca} placeholder="Buscar por nº, cliente ou produto" />
       </View>
       <FlatList
+        {...g.lista}
         data={lista}
         keyExtractor={(v) => v.id}
-        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        contentContainerStyle={[{ paddingTop: 16, paddingBottom: 100 }, g.conteudo]}
         renderItem={({ item: v }) => {
           const cat = CATEGORIA[v.itens[0]?.categoria ?? 'acessorio'];
           return (
+            <View style={g.celula}>
             <Pressable
               onPress={() => router.push({ pathname: '/venda/[id]', params: { id: v.id } })}
               style={({ pressed }) => [st.item, pressed && { opacity: 0.75 }, v.status === 'cancelada' && { opacity: 0.5 }]}
@@ -69,6 +73,7 @@ export default function Vendas() {
               </View>
               <Text style={st.total}>{fmtMoeda(v.total)}</Text>
             </Pressable>
+            </View>
           );
         }}
         ListEmptyComponent={

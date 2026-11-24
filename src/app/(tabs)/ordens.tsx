@@ -6,12 +6,15 @@ import { estaAtrasada, OrdemItem } from '../../components/Itens';
 import { Botao, Busca, Chips, Fab, Vazio } from '../../components/ui';
 import { STATUS, STATUS_ORDEM } from '../../lib/format';
 import { useDados } from '../../lib/store';
+import { useDesktop, useGrade } from '../../lib/desktop';
 import { colors } from '../../theme';
 
 type Filtro = 'abertas' | 'atrasadas' | 'todas' | (typeof STATUS_ORDEM)[number];
 
 export default function Ordens() {
   const insets = useSafeAreaInsets();
+  const g = useGrade(420);
+  const desktop = useDesktop();
   const params = useLocalSearchParams<{ filtro?: string }>();
   const { ordens, cliente } = useDados();
   const [busca, setBusca] = useState('');
@@ -50,19 +53,24 @@ export default function Ordens() {
   ];
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top + 12 }}>
-      <View style={{ paddingHorizontal: 16 }}>
+    <View style={{ flex: 1, paddingTop: desktop ? 24 : insets.top + 12 }}>
+      <View style={g.conteudo}>
         <Text style={st.h1}>Ordens de serviço</Text>
         <Busca value={busca} onChangeText={setBusca} placeholder="Buscar por nº, cliente, modelo, série…" />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={st.filtros}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={[st.filtros, g.conteudo]}>
         <Chips opcoes={opcoes} valor={filtro} onChange={setFiltro} />
       </ScrollView>
       <FlatList
+        {...g.lista}
         data={lista}
         keyExtractor={(o) => o.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
-        renderItem={({ item }) => <OrdemItem o={item} cliente={cliente(item.clienteId)} />}
+        contentContainerStyle={[{ paddingBottom: 100 }, g.conteudo]}
+        renderItem={({ item }) => (
+          <View style={g.celula}>
+            <OrdemItem o={item} cliente={cliente(item.clienteId)} />
+          </View>
+        )}
         ListHeaderComponent={<Text style={st.contagem}>{lista.length} ordem(ns)</Text>}
         ListEmptyComponent={
           <Vazio icon="construct-outline" texto="Nenhuma ordem encontrada neste filtro.">
@@ -70,7 +78,7 @@ export default function Ordens() {
           </Vazio>
         }
       />
-      <Fab onPress={() => router.push('/ordem/nova')} />
+      <Fab label="Nova OS (F2)" onPress={() => router.push('/ordem/nova')} />
     </View>
   );
 }

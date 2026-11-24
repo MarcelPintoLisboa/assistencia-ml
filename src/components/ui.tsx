@@ -11,6 +11,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { useDesktop } from '../lib/desktop';
 import { colors, radius, space } from '../theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -25,6 +26,36 @@ export function Card({ children, style, onPress }: { children: React.ReactNode; 
     <Pressable onPress={onPress} style={({ pressed }) => [s.card, style, pressed && { opacity: 0.75 }]}>
       {children}
     </Pressable>
+  );
+}
+
+/**
+ * Título da tela com botão principal. Celular: título e botão largo embaixo.
+ * Desktop: título à esquerda e botão compacto à direita, como em sistemas desktop.
+ */
+export function CabecalhoTela({
+  titulo, botao, children,
+}: {
+  titulo: string;
+  botao?: { label: string; icon: IconName; onPress: () => void };
+  children?: React.ReactNode;
+}) {
+  const desktop = useDesktop();
+  if (!desktop) {
+    return (
+      <>
+        <Text style={s.h1}>{titulo}</Text>
+        {botao && <Botao label={botao.label} icon={botao.icon} onPress={botao.onPress} style={{ marginBottom: 10 }} />}
+        {children}
+      </>
+    );
+  }
+  return (
+    <View style={s.cabecalhoDesktop}>
+      <Text style={[s.h1, { marginBottom: 0, flex: 1 }]}>{titulo}</Text>
+      {children}
+      {botao && <Botao label={botao.label} icon={botao.icon} onPress={botao.onPress} style={{ paddingHorizontal: 22 }} />}
+    </View>
   );
 }
 
@@ -61,12 +92,14 @@ export function Botao({
         toque();
         onPress();
       }}
-      style={({ pressed }) => [
+      style={(e) => [
         s.botao,
         variante === 'primario' && { backgroundColor: colors.primary },
         variante === 'secundario' && { borderColor: colors.primary, borderWidth: 1 },
         variante === 'perigo' && { borderColor: colors.critical, borderWidth: 1 },
-        pressed && { opacity: 0.7 },
+        // hover só existe no desktop/navegador
+        (e as typeof e & { hovered?: boolean }).hovered && (variante === 'primario' ? { opacity: 0.88 } : { backgroundColor: cor + '14' }),
+        e.pressed && { opacity: 0.7 },
         style,
       ]}
     >
@@ -145,7 +178,21 @@ export function Vazio({ icon, texto, children }: { icon: IconName; texto: string
   );
 }
 
-export function Fab({ onPress, icon = 'add' }: { onPress: () => void; icon?: IconName }) {
+export function Fab({ onPress, icon = 'add', label = 'Novo' }: { onPress: () => void; icon?: IconName; label?: string }) {
+  const desktop = useDesktop();
+  if (desktop) {
+    // desktop: botão com texto no canto, em vez do círculo flutuante do celular
+    return (
+      <Pressable
+        onPress={onPress}
+        style={(e) => [s.fabDesktop, (e as typeof e & { hovered?: boolean }).hovered && { opacity: 0.9 }]}
+        accessibilityLabel={label}
+      >
+        <Ionicons name={icon} size={20} color={colors.bg} />
+        <Text style={{ color: colors.bg, fontWeight: '800', fontSize: 15 }}>{label}</Text>
+      </Pressable>
+    );
+  }
   return (
     <Pressable
       onPress={() => {
@@ -261,6 +308,13 @@ export const s = StyleSheet.create({
     justifyContent: 'center',
   },
   vazioTxt: { color: colors.textSec, fontSize: 15, textAlign: 'center', lineHeight: 21 },
+  h1: { color: colors.text, fontSize: 26, fontWeight: '800', marginBottom: 12 },
+  cabecalhoDesktop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16, marginTop: 8 },
+  fabDesktop: {
+    position: 'absolute', right: 28, bottom: 28, flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 13, paddingHorizontal: 20, borderRadius: radius.md, backgroundColor: colors.primary,
+    shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
+  },
   fab: {
     position: 'absolute',
     right: 20,

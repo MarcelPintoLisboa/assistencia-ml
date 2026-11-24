@@ -3,8 +3,9 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Badge, Botao, Busca, Chips, Vazio } from '../../components/ui';
+import { Badge, Botao, Busca, CabecalhoTela, Chips, Vazio } from '../../components/ui';
 import { CATEGORIA, fmtMoeda } from '../../lib/format';
+import { useDesktop, useGrade } from '../../lib/desktop';
 import { useDados } from '../../lib/store';
 import type { CategoriaProduto } from '../../lib/types';
 import { colors, radius } from '../../theme';
@@ -13,6 +14,8 @@ type Filtro = 'todos' | 'baixo' | CategoriaProduto;
 
 export default function Produtos() {
   const insets = useSafeAreaInsets();
+  const g = useGrade();
+  const desktop = useDesktop();
   const { produtos: todos, ehAdmin } = useDados();
   // produtos excluídos (exclusão lógica) não aparecem
   const produtos = useMemo(() => todos.filter((p) => !p.excluido), [todos]);
@@ -29,16 +32,15 @@ export default function Produtos() {
   }, [produtos, busca, filtro]);
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top + 12 }}>
-      <View style={{ paddingHorizontal: 16 }}>
-        <Text style={st.h1}>Produtos</Text>
-        <Botao label="Novo produto" icon="add" onPress={() => router.push('/produtos/editar')} style={{ marginBottom: 10 }} />
+    <View style={{ flex: 1, paddingTop: desktop ? 24 : insets.top + 12 }}>
+      <View style={g.conteudo}>
+        <CabecalhoTela titulo="Produtos" botao={{ label: 'Novo produto', icon: 'add', onPress: () => router.push('/produtos/editar') }} />
         <Text style={{ color: baixos ? colors.warning : colors.textSec, marginBottom: 10 }}>
           {produtos.length} produto(s){baixos ? ` · ${baixos} com estoque baixo` : ''}
         </Text>
         <Busca value={busca} onChangeText={setBusca} placeholder="Buscar produto, marca ou SKU" />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={[{ paddingTop: 12 }, g.conteudo]}>
         <Chips<Filtro>
           opcoes={[
             { value: 'todos', label: 'Todos' },
@@ -50,13 +52,15 @@ export default function Produtos() {
         />
       </ScrollView>
       <FlatList
+        {...g.lista}
         data={lista}
         keyExtractor={(p) => p.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+        contentContainerStyle={[{ paddingBottom: 100 }, g.conteudo]}
         renderItem={({ item: p }) => {
           const baixo = p.estoque <= p.estoqueMinimo;
           const margem = p.preco ? Math.round(((p.preco - p.custo) / p.preco) * 100) : 0;
           return (
+            <View style={g.celula}>
             <Pressable
               onPress={() => router.push({ pathname: '/produtos/editar', params: { id: p.id } })}
               style={({ pressed }) => [st.item, pressed && { opacity: 0.75 }, !p.ativo && { opacity: 0.5 }]}
@@ -76,6 +80,7 @@ export default function Produtos() {
               </View>
               <Text style={st.preco}>{fmtMoeda(p.preco)}</Text>
             </Pressable>
+            </View>
           );
         }}
         ListEmptyComponent={

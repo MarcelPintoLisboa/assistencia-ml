@@ -78,6 +78,8 @@ O `versionCode` é o número da execução do workflow, então cada APK novo ins
 A pasta `desktop/` empacota a versão web do app com o [Electron](https://www.electronjs.org/) e gera um instalador `.exe`. O mesmo workflow dos instaladores gera o APK, o IPA e o `.exe` (job **Windows (instalador .exe)**). Com uma tag `v*`, o instalador também vai para a Release como `assistencia-ml-<versão>-windows.exe`.
 
 - Usa o mesmo login e os mesmos dados na nuvem que o celular.
+- Com a janela larga (900 px ou mais), o app usa o **layout desktop**: menu lateral fixo (com Administração e Configurações), listas em grade, Painel em duas colunas, Nova venda no formato de caixa (produtos à esquerda, carrinho à direita) e efeito de hover. Com a janela estreita, volta ao layout do celular.
+- Atalhos: **F2** nova OS · **F3** nova venda · **F4** novo cliente · **F6** agendar.
 - **Imprimir** abre a janela de impressão do Windows. **Compartilhar PDF** salva o arquivo e o abre.
 - Lembretes (notificações) e o compartilhamento direto para o WhatsApp existem só no celular.
 - O instalador não tem assinatura digital. Na primeira instalação, o Windows pode mostrar "O Windows protegeu o computador": clique em **Mais informações → Executar assim mesmo**.

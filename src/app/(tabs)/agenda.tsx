@@ -6,11 +6,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AgendamentoItem } from '../../components/Itens';
 import { Botao, Fab, toque, Vazio } from '../../components/ui';
 import { DIAS_SEMANA, inicioDoDia, MESES_LONGOS, mesmoDia } from '../../lib/format';
+import { useDesktop } from '../../lib/desktop';
 import { useDados } from '../../lib/store';
 import { colors, radius } from '../../theme';
 
 export default function Agenda() {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
+  const m = desktop ? 28 : 16;
   const { agendamentos, ordens, cliente, alternarAgendamento } = useDados();
   const [dia, setDia] = useState(inicioDoDia(new Date()));
   const [semanaBase, setSemanaBase] = useState(() => {
@@ -47,8 +50,8 @@ export default function Agenda() {
   };
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top + 12 }}>
-      <View style={{ paddingHorizontal: 16 }}>
+    <View style={{ flex: 1, paddingTop: desktop ? 24 : insets.top + 12 }}>
+      <View style={{ paddingHorizontal: m }}>
         <View style={st.topo}>
           <Text style={st.h1}>Agenda</Text>
           <Pressable
@@ -108,7 +111,7 @@ export default function Agenda() {
       <FlatList
         data={doDia}
         keyExtractor={(a) => a.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, paddingTop: 12 }}
+        contentContainerStyle={{ paddingHorizontal: m, paddingBottom: 100, paddingTop: 12, ...(desktop && { maxWidth: 900 }) }}
         ListHeaderComponent={
           entregasDoDia.length > 0 ? (
             <View style={{ marginBottom: 8 }}>
@@ -150,6 +153,7 @@ export default function Agenda() {
         }
       />
       <Fab
+        label="Agendar (F6)"
         onPress={() => {
           const d = new Date(dia);
           const agora = new Date();

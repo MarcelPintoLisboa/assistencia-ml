@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ColorValue } from 'react-native';
 import { Tabs } from 'expo-router/tabs';
+import { useDesktop } from '../../lib/desktop';
 import { useDados } from '../../lib/store';
 import { colors } from '../../theme';
 
@@ -13,6 +14,7 @@ const icone = (nome: IconName, ativo: IconName) =>
 
 export default function TabsLayout() {
   const { agendamentos } = useDados();
+  const desktop = useDesktop();
   const hoje = new Date().toDateString();
   const pendentesHoje = agendamentos.filter((a) => !a.concluido && new Date(a.data).toDateString() === hoje).length;
 
@@ -22,7 +24,8 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { backgroundColor: colors.bgAlt, borderTopColor: colors.border },
+        // no desktop a navegação fica no menu lateral
+        tabBarStyle: desktop ? { display: 'none' } : { backgroundColor: colors.bgAlt, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
         sceneStyle: { backgroundColor: colors.bg },
       }}

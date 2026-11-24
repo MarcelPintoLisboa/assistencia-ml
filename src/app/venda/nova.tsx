@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Botao, Busca, Campo, Card, Chips, Rotulo, s as ui, Titulo, toque } from '../../components/ui';
 import { CATEGORIA, fmtMoeda, PAGAMENTO, parseMoeda } from '../../lib/format';
+import { useDesktop } from '../../lib/desktop';
 import { itensSemEstoque } from '../../lib/estoque';
 import { useDados } from '../../lib/store';
 import type { FormaPagamento, ItemVenda } from '../../lib/types';
@@ -11,6 +12,7 @@ import { colors, radius } from '../../theme';
 
 export default function NovaVenda() {
   const { produtos, clientes, registrarVenda, salvarCliente } = useDados();
+  const desktop = useDesktop();
   const [busca, setBusca] = useState('');
   const [itens, setItens] = useState<ItemVenda[]>([]);
   const [desconto, setDesconto] = useState('');
@@ -93,10 +95,8 @@ export default function NovaVenda() {
     router.replace({ pathname: '/venda/[id]', params: { id: v.id, nova: '1' } });
   };
 
-  return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Stack.Screen options={{ title: 'Nova venda' }} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+  const listaProdutos = (
+    <>
         <Busca value={busca} onChangeText={setBusca} placeholder="Buscar produto, marca ou SKU" />
         <View style={{ marginTop: 10, gap: 8 }}>
           {disponiveis.map((p) => {
@@ -133,12 +133,14 @@ export default function NovaVenda() {
             </Text>
           )}
         </View>
-
-
+    </>
+  );
+  const fechamento = (
+    <>
         <Titulo>Carrinho</Titulo>
         <Card>
           {itens.length === 0 ? (
-            <Text style={{ color: colors.textSec }}>Toque nos produtos acima para adicionar.</Text>
+            <Text style={{ color: colors.textSec }}>{desktop ? 'Clique nos produtos ao lado para adicionar.' : 'Toque nos produtos acima para adicionar.'}</Text>
           ) : (
             itens.map((i, idx) => (
               <View key={i.produtoId} style={st.linha}>
@@ -202,12 +204,34 @@ export default function NovaVenda() {
         </Card>
 
         <Botao label={`Finalizar venda · ${fmtMoeda(total)}`} icon="checkmark-done" onPress={finalizar} style={{ marginTop: 24 }} />
-      </ScrollView>
+    </>
+  );
+
+  return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Stack.Screen options={{ title: desktop ? 'Nova venda (F3)' : 'Nova venda', ...(desktop && { contentStyle: { backgroundColor: colors.bg } }) }} />
+      {desktop ? (
+        // Desktop: produtos à esquerda e carrinho/pagamento fixos à direita, como um caixa
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+            {listaProdutos}
+          </ScrollView>
+          <ScrollView style={st.ladoCaixa} contentContainerStyle={{ padding: 20, paddingTop: 4, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+            {fechamento}
+          </ScrollView>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+          {listaProdutos}
+          {fechamento}
+        </ScrollView>
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 const st = StyleSheet.create({
+  ladoCaixa: { width: 440, flexGrow: 0, backgroundColor: colors.bgAlt, borderLeftWidth: 1, borderLeftColor: colors.border },
   prod: {
     flexDirection: 'row',
     alignItems: 'center',

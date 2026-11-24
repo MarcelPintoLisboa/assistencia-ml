@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Botao, Card, Titulo } from '../../components/ui';
 import { prepararNotificacoes } from '../../lib/notifications';
 import { useConta } from '../../lib/conta';
+import { useDesktop } from '../../lib/desktop';
 import { useDados } from '../../lib/store';
 import { useAuth } from '../../lib/auth';
 import { colors, radius } from '../../theme';
@@ -27,12 +28,14 @@ function confirmar(titulo: string, msg: string, acao: () => void) {
 
 export default function Ajustes() {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
+  const m = desktop ? 28 : 16;
   const { clientes, ordens, agendamentos, loja, ehAdmin } = useDados();
   const { user, sair } = useAuth();
   const { equipeDisponivel, ehAdminGeral, empresa } = useConta();
 
   return (
-    <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 16, paddingBottom: 40 }}>
+    <ScrollView contentContainerStyle={{ paddingTop: desktop ? 24 : insets.top + 12, paddingHorizontal: m, paddingBottom: 40, ...(desktop && { maxWidth: 900 }) }}>
       <Text style={st.h1}>Menu</Text>
 
       <View style={st.banner}>

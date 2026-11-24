@@ -6,6 +6,8 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { AlertaWebHost } from '../components/AlertaWeb';
 import Login from '../components/Login';
+import { MenuLateral } from '../components/MenuLateral';
+import { useDesktop } from '../lib/desktop';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EstadoConta } from '../components/EstadoConta';
 import { TrocarSenha } from '../components/TrocarSenha';
@@ -44,16 +46,7 @@ export default function RootLayout() {
     <ThemeProvider value={tema}>
       <AuthProvider>
         <StatusBar style="light" />
-        {Platform.OS === 'web' ? (
-          // Desktop / navegador: conteúdo centralizado com largura de leitura confortável
-          <View style={{ flex: 1, backgroundColor: colors.bg }}>
-            <View style={{ flex: 1, width: '100%', maxWidth: 1100, alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border }}>
-              <Portao />
-            </View>
-          </View>
-        ) : (
-          <Portao />
-        )}
+        <Portao />
         <AlertaWebHost />
       </AuthProvider>
     </ThemeProvider>
@@ -95,6 +88,7 @@ function PortaoConta() {
 function Carregamento() {
   const { carregado, erroCarga, recarregar } = useDados();
   const { sair } = useAuth();
+  const desktop = useDesktop();
   if (!carregado) {
     return (
       <Centro>
@@ -121,17 +115,21 @@ function Carregamento() {
       </Centro>
     );
   }
-  return (
+  const pilha = (
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.bg },
             headerTintColor: colors.primary,
-            headerTitleStyle: { color: colors.text, fontWeight: '700' },
-            contentStyle: { backgroundColor: colors.bg },
-            headerShadowVisible: false,
+            headerTitleStyle: { color: colors.text, fontWeight: '700', ...(desktop && { fontSize: 20 }) },
+            // desktop: formulários e detalhes centralizados, sem esticar na tela inteira
+            contentStyle: desktop
+              ? { backgroundColor: colors.bg, width: '100%', maxWidth: 1000, alignSelf: 'center' }
+              : { backgroundColor: colors.bg },
+            headerShadowVisible: desktop,
+            animation: desktop ? 'none' : undefined,
           }}
         >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
           <Stack.Screen name="ordem/nova" options={{ title: 'Ordem de serviço', presentation: 'modal' }} />
           <Stack.Screen name="ordem/[id]" options={{ title: 'Detalhes da OS' }} />
           <Stack.Screen name="cliente/novo" options={{ title: 'Cliente', presentation: 'modal' }} />
@@ -151,5 +149,13 @@ function Carregamento() {
           <Stack.Screen name="acessos" options={{ title: 'Empresas e acessos' }} />
           <Stack.Screen name="senha" options={{ title: 'Trocar senha', presentation: 'modal' }} />
         </Stack>
+  );
+  if (!desktop) return pilha;
+  // Desktop: menu lateral fixo + conteúdo
+  return (
+    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.bg }}>
+      <MenuLateral />
+      <View style={{ flex: 1 }}>{pilha}</View>
+    </View>
   );
 }

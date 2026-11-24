@@ -3,11 +3,13 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Botao, Busca, Fab, Vazio } from '../components/ui';
+import { useGrade } from '../lib/desktop';
 import { useDados } from '../lib/store';
 import { colors, radius } from '../theme';
 
 export default function Clientes() {
   const { clientes, ordens } = useDados();
+  const g = useGrade();
   const [busca, setBusca] = useState('');
 
   const lista = useMemo(() => {
@@ -19,17 +21,19 @@ export default function Clientes() {
 
   return (
     <View style={{ flex: 1, paddingTop: 12 }}>
-      <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+      <View style={[g.conteudo, { marginBottom: 12 }]}>
         <Busca value={busca} onChangeText={setBusca} placeholder="Buscar por nome, telefone ou e-mail" />
       </View>
       <FlatList
+        {...g.lista}
         data={lista}
         keyExtractor={(c) => c.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+        contentContainerStyle={[{ paddingBottom: 100 }, g.conteudo]}
         renderItem={({ item }) => {
           const os = ordens.filter((o) => o.clienteId === item.id);
           const abertas = os.filter((o) => !['entregue', 'cancelado'].includes(o.status)).length;
           return (
+            <View style={g.celula}>
             <Pressable
               onPress={() => router.push({ pathname: '/cliente/[id]', params: { id: item.id } })}
               style={({ pressed }) => [st.item, pressed && { opacity: 0.75 }]}
@@ -49,6 +53,7 @@ export default function Clientes() {
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </Pressable>
+            </View>
           );
         }}
         ListEmptyComponent={
@@ -57,7 +62,7 @@ export default function Clientes() {
           </Vazio>
         }
       />
-      <Fab icon="person-add" onPress={() => router.push('/cliente/novo')} />
+      <Fab icon="person-add" label="Novo cliente (F4)" onPress={() => router.push('/cliente/novo')} />
     </View>
   );
 }

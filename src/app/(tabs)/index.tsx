@@ -9,6 +9,7 @@ import { GraficoEntradasSaidas, Ponto } from '../../components/GraficoEntradasSa
 import { AgendamentoItem, estaAtrasada } from '../../components/Itens';
 import { Botao, Card, Chips, Titulo, Vazio } from '../../components/ui';
 import { DIAS_SEMANA, diasEntre, fmtMoeda, inicioDoDia, MESES, MESES_LONGOS, mesmoDia, STATUS, STATUS_ORDEM } from '../../lib/format';
+import { useDesktop } from '../../lib/desktop';
 import { useDados } from '../../lib/store';
 import { colors, radius } from '../../theme';
 
@@ -17,6 +18,7 @@ type Periodo = '7d' | '30d' | '6m';
 
 export default function Painel() {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
   const { ordens, agendamentos, cliente, alternarAgendamento, carregado, loja } = useDados();
   const [periodo, setPeriodo] = useState<Periodo>('7d');
   const agora = new Date();
@@ -103,7 +105,7 @@ export default function Painel() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 32 }}>
       {/* Hero com a imagem da marca */}
-      <View style={[st.hero, { paddingTop: insets.top + 16 }]}>
+      <View style={[st.hero, { paddingTop: insets.top + 16 }, desktop && st.heroDesktop]}>
         <Image source={require('../../../assets/marca.png')} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient
           colors={['rgba(5,11,26,0.35)', 'rgba(5,11,26,0.75)', colors.bg]}
@@ -140,7 +142,7 @@ export default function Painel() {
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: 16 }}>
+      <View style={{ paddingHorizontal: desktop ? 28 : 16 }}>
         {carregado && ordens.length === 0 ? (
           <Card style={{ marginTop: 8 }}>
             <Vazio icon="rocket-outline" texto="Bem-vindo! Cadastre sua primeira ordem de serviço.">
@@ -149,6 +151,8 @@ export default function Painel() {
           </Card>
         ) : (
           <>
+            <View style={desktop ? st.colunas : undefined}>
+            <View style={desktop ? st.colA : undefined}>
             {/* Ações rápidas */}
             <View style={st.acoes}>
               <Acao icon="add-circle" label="Nova OS" onPress={() => router.push('/ordem/nova')} />
@@ -194,6 +198,8 @@ export default function Painel() {
               <GraficoEntradasSaidas dados={serie} />
             </Card>
 
+            </View>
+            <View style={desktop ? st.colB : undefined}>
             <Titulo acao={{ label: 'Ver todas', onPress: () => router.push('/ordens') }}>Equipamentos por etapa</Titulo>
             <Card>
               {ind.porStatus.map(({ s, n }) => (
@@ -222,6 +228,8 @@ export default function Painel() {
                 <AgendamentoItem key={a.id} a={a} cliente={cliente(a.clienteId)} onToggle={() => alternarAgendamento(a.id)} mostrarData />
               ))
             )}
+            </View>
+            </View>
           </>
         )}
       </View>
@@ -262,6 +270,10 @@ function Kpi({ icon, label, valor, pequeno }: { icon: IconName; label: string; v
 }
 
 const st = StyleSheet.create({
+  colunas: { flexDirection: 'row', gap: 24, alignItems: 'flex-start' },
+  colA: { flex: 3, minWidth: 0 },
+  colB: { flex: 2, minWidth: 0 },
+  heroDesktop: { paddingHorizontal: 28, paddingBottom: 28 },
   hero: { paddingHorizontal: 20, paddingBottom: 24, overflow: 'hidden' },
   heroTopo: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 28 },
   logo: { width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
