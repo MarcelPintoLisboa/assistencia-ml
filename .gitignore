@@ -39,3 +39,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# app desktop (gerados)
+desktop/node_modules/
+desktop/app/
+desktop/dist/
+desktop/dist-teste/

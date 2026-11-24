@@ -4,6 +4,7 @@ import { DarkTheme, router, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
+import { AlertaWebHost } from '../components/AlertaWeb';
 import Login from '../components/Login';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EstadoConta } from '../components/EstadoConta';
@@ -43,7 +44,17 @@ export default function RootLayout() {
     <ThemeProvider value={tema}>
       <AuthProvider>
         <StatusBar style="light" />
-        <Portao />
+        {Platform.OS === 'web' ? (
+          // Desktop / navegador: conteúdo centralizado com largura de leitura confortável
+          <View style={{ flex: 1, backgroundColor: colors.bg }}>
+            <View style={{ flex: 1, width: '100%', maxWidth: 1100, alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border }}>
+              <Portao />
+            </View>
+          </View>
+        ) : (
+          <Portao />
+        )}
+        <AlertaWebHost />
       </AuthProvider>
     </ThemeProvider>
   );

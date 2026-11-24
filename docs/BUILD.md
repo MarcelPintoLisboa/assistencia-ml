@@ -72,3 +72,23 @@ aumente também `android.versionCode` / `ios.buildNumber` a cada envio.
 5. **Verificação de desenvolvedor (Brasil)**: o Google passou a exigir, em aparelhos certificados no Brasil, que apps instalados fora da Play Store sejam de desenvolvedores verificados. Se o aparelho bloquear por esse motivo, cadastre-se no Android Developer Console (há opção gratuita para distribuição limitada) ou instale pelo computador com `adb install assistencia-ml.apk`, que não passa por essa verificação.
 
 O `versionCode` é o número da execução do workflow, então cada APK novo instala por cima do anterior (desde que assinado com a mesma chave).
+
+## Versão desktop (Windows)
+
+A pasta `desktop/` empacota a versão web do app com o [Electron](https://www.electronjs.org/) e gera um instalador `.exe`. O mesmo workflow dos instaladores gera o APK, o IPA e o `.exe` (job **Windows (instalador .exe)**). Com uma tag `v*`, o instalador também vai para a Release como `assistencia-ml-<versão>-windows.exe`.
+
+- Usa o mesmo login e os mesmos dados na nuvem que o celular.
+- **Imprimir** abre a janela de impressão do Windows. **Compartilhar PDF** salva o arquivo e o abre.
+- Lembretes (notificações) e o compartilhamento direto para o WhatsApp existem só no celular.
+- O instalador não tem assinatura digital. Na primeira instalação, o Windows pode mostrar "O Windows protegeu o computador": clique em **Mais informações → Executar assim mesmo**.
+
+Para gerar no próprio computador:
+
+```bash
+npx expo export --platform web --output-dir desktop/app
+cd desktop
+npm install
+npx electron-builder --win nsis    # instalador em desktop/dist/
+```
+
+Se o app fechar sozinho ao abrir pelo terminal do VS Code, remova a variável `ELECTRON_RUN_AS_NODE` antes (o VS Code a define). Para diagnosticar, abra com `ASSISTENCIA_DEBUG=C:\caminho\print.png`: o app grava um log e um print da tela.

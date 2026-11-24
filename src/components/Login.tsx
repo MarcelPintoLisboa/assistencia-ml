@@ -82,7 +82,7 @@ export default function Login() {
 }
 
 const s = StyleSheet.create({
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20, width: '100%', maxWidth: 480, alignSelf: 'center' },
   marca: { width: '100%', height: 150, borderRadius: radius.lg, marginBottom: 18 },
   app: { color: colors.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
   sub: { color: colors.textSec, textAlign: 'center', marginTop: 6, marginBottom: 22 },
