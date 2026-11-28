@@ -1,5 +1,6 @@
 import type { Session, User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { marcarEntradaComSenha } from './biometria';
 import { supabase } from './supabase';
 
 interface AuthCtx {
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       entrar: async (email, senha) => {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: senha });
         if (error) throw error;
+        marcarEntradaComSenha();
       },
       sair: async () => {
         await supabase.auth.signOut();

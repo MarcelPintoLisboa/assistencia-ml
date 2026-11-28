@@ -61,6 +61,34 @@ export interface OrdemServico {
   procedimentos: Procedimento[];
   historico: HistoricoOS[];
   notificationId?: string | null;
+  /** Ficha de envio para assistência (preenchida ao abrir a OS; sai na etiqueta). undefined = OS antiga */
+  fichaEnvio?: FichaEnvio | null;
+}
+
+export type ModeloConsole = 'xbox360' | 'xboxone' | 'xboxs' | 'ps2' | 'ps3' | 'ps4' | 'ps5';
+
+/** Campos da "Ficha envio assistência" em papel que não existem como campo próprio da OS. */
+export interface FichaEnvio {
+  tipo?: 'manutencao' | 'retorno';
+  origem?: 'cliente' | 'loja';
+  vendedor?: string;
+  /** Quantidade de controles deixados (1 ou 2) */
+  controles?: number;
+  cabos?: boolean;
+  jogos?: boolean;
+  /** Como o aparelho chegou */
+  situacao?: 'liga' | 'nao_liga' | 'plin' | 'sem_imagem';
+  ap?: boolean;
+  /** Console com defeito? */
+  defeito?: boolean;
+  modelo?: ModeloConsole;
+  versao?: 'fat' | 'slim';
+  /** Problemas do controle */
+  controle?: ('drift' | 'botoes' | 'setas' | 'analogicos' | 'placa')[];
+  /** Itens do checklist de serviço (rótulos de SERVICOS_CONSOLE) */
+  servicos?: string[];
+  /** Serviço (texto livre) */
+  servico?: string;
 }
 
 export type TipoAgendamento = 'visita' | 'entrega' | 'retirada' | 'manutencao' | 'retorno' | 'outro';
@@ -100,6 +128,10 @@ export interface Produto {
   excluidoEm?: string | null;
   /** Ficha técnica de entrada (tudo opcional). null = sem ficha; undefined = coluna ainda não existe na nuvem */
   ficha?: FichaEntrada | null;
+  /** Modelo (ex.: PS5 Slim, Mini 4 Pro) — opcional, aparece no story */
+  modelo?: string;
+  /** Foto do produto (data URI) — opcional */
+  foto?: string | null;
 }
 
 /** Campos da "Ficha técnica de entrada" em papel. Nenhum é obrigatório. */
@@ -119,7 +151,7 @@ export interface FichaEntrada {
   cor?: 'branco' | 'preto' | 'especial';
   acompanha?: ('controle' | 'cabos' | 'jogos')[];
   liga?: boolean;
-  modelo?: 'xbox360' | 'xboxone' | 'xboxs' | 'ps2' | 'ps3' | 'ps4' | 'ps5';
+  modelo?: ModeloConsole;
   versao?: 'fat' | 'slim';
   estado?: string;
   servico?: string;
@@ -199,6 +231,8 @@ export interface ModeloEtiqueta {
     acessorios: boolean;
     descricao: boolean;
     contato: boolean;
+    /** Ficha de envio (estado, acessórios, controle, serviços). Ausente em modelos antigos = mostrar. */
+    ficha?: boolean;
   };
 }
 

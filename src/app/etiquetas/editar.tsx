@@ -118,6 +118,7 @@ export default function EditarModelo() {
         <Card style={{ paddingVertical: 4 }}>
           {(
             [
+              ['ficha', 'Ficha de envio (estado, acessórios, serviço)'],
               ['descricao', 'Relato do defeito'],
               ['cliente', 'Nome do cliente'],
               ['telefone', 'Telefone do cliente'],
@@ -130,10 +131,10 @@ export default function EditarModelo() {
             <View key={k} style={[st.toggle, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
               <Text style={{ color: colors.text, flex: 1 }}>{rot}</Text>
               <Switch
-                value={m.mostrar[k]}
+                value={m.mostrar[k] !== false}
                 onValueChange={(v) => setMostrar(k, v)}
                 trackColor={{ true: colors.primaryDim, false: colors.border }}
-                thumbColor={m.mostrar[k] ? colors.primary : colors.textMuted}
+                thumbColor={m.mostrar[k] !== false ? colors.primary : colors.textMuted}
               />
             </View>
           ))}

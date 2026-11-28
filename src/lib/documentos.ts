@@ -1,7 +1,7 @@
 // Gera as fichas em HTML (A4) a partir dos dados do app, no estilo das fichas da loja:
 // Orçamento, Ficha técnica de entrada, Ficha técnica de saída / Ordem de venda e Ficha de envio p/ assistência.
 import { ehDrone, fmtData, fmtMoeda, PAGAMENTO, defeitosSugeridos } from './format';
-import type { Cliente, DadosLoja, OrdemServico, Venda } from './types';
+import type { Cliente, DadosLoja, FichaEnvio, OrdemServico, Venda } from './types';
 
 export const LOJA_PADRAO: DadosLoja = {
   nome: 'Flygames Assistência Técnica',
@@ -131,8 +131,22 @@ function blocoCliente(c: Cliente | undefined, extra = '') {
   </div>`;
 }
 
-function gradeConsoles(o: { marca: string; modelo: string }) {
-  const k = consoles(o);
+function gradeConsoles(o: { marca: string; modelo: string }, f?: FichaEnvio | null) {
+  // com o modelo marcado na ficha, usa ele; senão tenta reconhecer pelo texto de marca/modelo
+  const k = f?.modelo
+    ? {
+        'XBOX 360': f.modelo === 'xbox360',
+        FAT: f.modelo === 'xbox360' && f.versao === 'fat',
+        'XBOX ONE': f.modelo === 'xboxone',
+        'XBOX S': f.modelo === 'xboxs',
+        PS2: f.modelo === 'ps2',
+        PS3: f.modelo === 'ps3',
+        PS4: f.modelo === 'ps4',
+        PS5: f.modelo === 'ps5',
+        F: f.modelo.startsWith('ps') && f.versao === 'fat',
+        S: f.modelo.startsWith('ps') && f.versao === 'slim',
+      }
+    : consoles(o);
   return `${cb('XBOX 360', k['XBOX 360'])}${cb('FAT', k.FAT)}${cb('XBOX ONE', k['XBOX ONE'])}${cb('XBOX S', k['XBOX S'])}<br/>
     ${cb('PS2', k.PS2)}${cb('PS3', k.PS3)}${cb('PS4', k.PS4)}${cb('PS5', k.PS5)} / ${cb('F', k.F)}${cb('S', k.S)}`;
 }
@@ -318,31 +332,43 @@ const CHECK_GAME: { rotulo: string; defeitos: string[] }[] = [
 
 export function htmlEnvioAssistencia(o: OrdemServico, c: Cliente | undefined, loja: DadosLoja) {
   const def = new Set(o.defeitos ?? []);
-  const ac = acessoriosMarcados(o.acessorios);
+  // OS novas trazem a ficha preenchida; nas antigas as caixinhas são deduzidas dos defeitos/acessórios
+  const f = o.fichaEnvio ?? null;
+  const acTxt = acessoriosMarcados(o.acessorios);
+  const ac = f
+    ? { c1: f.controles === 1, c2: f.controles === 2, cabos: !!f.cabos, jogos: !!f.jogos }
+    : { c1: acTxt.controle, c2: false, cabos: acTxt.cabos, jogos: acTxt.jogos };
+  const sit = f?.situacao ?? (naoLiga(o) ? 'nao_liga' : def.has('Sem imagem / HDMI') ? 'sem_imagem' : 'liga');
+  const comDefeito = f?.defeito ?? def.size > 0;
+  const ctl = new Set<string>(f?.controle ?? [...(def.has('Drift no analógico') ? ['drift', 'analogicos'] : []), ...(def.has('Botão falhando') ? ['botoes'] : [])]);
+  const servicos = new Set((f?.servicos ?? []).map((s) => s.toUpperCase()));
+  const cor = (o.cor ?? '').toLowerCase();
   const drone = ehDrone(o.tipoEquipamento);
   const grade = drone
     ? defeitosSugeridos(o.tipoEquipamento).map((d) => cb(d.toUpperCase(), def.has(d))).join('')
-    : CHECK_GAME.map((i) => cb(i.rotulo, i.defeitos.some((d) => def.has(d)))).join('');
+    : CHECK_GAME.map((i) => cb(i.rotulo, f ? servicos.has(i.rotulo) : i.defeitos.some((d) => def.has(d)))).join('');
+  const servicoTxt = [f?.servico, o.procedimentos.map((p) => p.descricao).join(', ')].filter(Boolean).join(' · ');
   const corpo = `
   <div class="tri">
-    <div class="box" style="flex:1.4">${cb('Manutenção', true)}${cb('Loja', false)}<br/>${cb('Cliente', true)}${cb('Retorno', false)}</div>
-    <div class="box" style="flex:1"><b>OS:</b> ${numOS(o.numero)}<br/><b>TEC:</b> ${esc(o.tecnico)}</div>
+    <div class="box" style="flex:1.4">${cb('Manutenção', f ? f.tipo === 'manutencao' : true)}${cb('Loja', f?.origem === 'loja')}<br/>${cb('Cliente', f ? f.origem === 'cliente' : true)}${cb('Retorno', f?.tipo === 'retorno')}</div>
+    <div class="box" style="flex:1"><b>OS:</b> ${numOS(o.numero)}<br/><b>TEC:</b> ${esc(o.tecnico)}<br/><b>VEN:</b> ${esc(f?.vendedor)}</div>
     <div class="box" style="flex:1">1º Via - Loja<br/>2º Via - Assist.</div>
   </div>
   ${blocoCliente(
     c,
-    `<div class="row">${campo('Entrada', fmtData(o.dataEntrada))}${campo('Garantia', o.garantiaDias ? `${o.garantiaDias} dias` : '')}${campo('Saída', '')}</div>
+    `<div class="row">${campo('Entrada', fmtData(o.dataEntrada))}${campo('Garantia', o.garantiaDias ? `${o.garantiaDias} dias` : '')}${campo('Saída', o.dataSaida ? fmtData(o.dataSaida) : '')}</div>
      <div class="row">${campo('Nº de série', o.numeroSerie)}</div>
      <div class="row">${campo('Marca', o.marca)}${campo('Cor', o.cor)}${campo('Mod', o.modelo)}</div>
-     <div class="row"><div class="cell">${cb('CONTROLE', ac.controle)}${cb('CABOS', ac.cabos)}${cb('JOGOS', ac.jogos)}
-       &nbsp; ${cb(drone ? 'LIGA' : 'CONSOLE LIGA', !naoLiga(o))}${cb('NÃO LIGA', naoLiga(o))}${drone ? '' : cb('LIGA SEM IMAGEM', def.has('Sem imagem / HDMI'))}</div></div>`,
+     <div class="row"><div class="cell">${cb('CONTROLE 1', ac.c1)}${cb('2', ac.c2)}${cb('CABOS', ac.cabos)}${cb('JOGOS', ac.jogos)}
+       &nbsp; ${cb(drone ? 'LIGA' : 'CONSOLE LIGA', sit === 'liga')}${cb('NÃO LIGA', sit === 'nao_liga')}${drone ? '' : cb('PLIN', sit === 'plin') + cb('LIGA SEM IMAGEM', sit === 'sem_imagem')}${cb('AP', !!f?.ap)}</div></div>`,
   )}
   <div class="box">
-    <div class="row"><div class="cell"><b>${drone ? 'DRONE' : 'CONSOLE'}:</b> ${cb('DEFEITO SIM', def.size > 0)}${cb('NÃO', def.size === 0)}</div></div>
-    ${drone ? '' : `<div class="row"><div class="cell">${gradeConsoles(o)}</div></div>
-    <div class="row"><div class="cell"><b>CONTROLE:</b> ${cb('DRIFT', def.has('Drift no analógico'))}${cb('BOTÕES', def.has('Botão falhando'))}${cb('SETAS', false)}${cb('ANALÓGICOS', def.has('Drift no analógico'))}${cb('PLACA', false)}</div></div>`}
+    <div class="row"><div class="cell"><b>${drone ? 'DRONE' : 'CONSOLE'}:</b> ${cb('DEFEITO SIM', comDefeito)}${cb('NÃO', !comDefeito)}</div></div>
+    ${drone ? '' : `<div class="row"><div class="cell">${gradeConsoles(o, f)}</div></div>
+    <div class="row"><div class="cell">${cb('Branco', cor.includes('branc'))}${cb('Preto', cor.includes('pret'))}${cb('Serie ESP.', cor.includes('especial'))}</div></div>
+    <div class="row"><div class="cell"><b>CONTROLE:</b> ${cb('DRIFT', ctl.has('drift'))}${cb('BOTÕES', ctl.has('botoes'))}${cb('SETAS', ctl.has('setas'))}${cb('ANALÓGICOS', ctl.has('analogicos'))}${cb('PLACA', ctl.has('placa'))}</div></div>`}
     <div class="row"><div class="cell">${grade}</div></div>
-    <div class="row">${campo('SERVIÇO', o.procedimentos.map((p) => p.descricao).join(', '))}</div>
+    <div class="row">${campo('SERVIÇO', servicoTxt)}</div>
   </div>
   <div class="box linhas">
     <div><b>DESCRITIVO / DEFEITO:</b> ${esc(o.defeito)}</div>

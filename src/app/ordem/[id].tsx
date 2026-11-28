@@ -4,6 +4,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ListaDocumentos, type Doc } from '../../components/Documentos';
 import { AgendamentoItem, estaAtrasada } from '../../components/Itens';
+import { resumoFichaEnvio } from '../../lib/fichas';
 import { htmlEnvioAssistencia, htmlFichaEntrada, htmlFichaSaidaOS, htmlOrcamento } from '../../lib/documentos';
 import { Badge, Botao, Card, Linha, Titulo, toque, Vazio } from '../../components/ui';
 import { diasEntre, fmtData, fmtDataHora, fmtMoeda, PRIORIDADE, STATUS, STATUS_ORDEM } from '../../lib/format';
@@ -199,6 +200,9 @@ export default function DetalheOrdem() {
 
         <Titulo>Detalhes</Titulo>
         <Card>
+          {resumoFichaEnvio(o.fichaEnvio).map((l) => (
+            <Linha key={l.rot} icon="clipboard-outline" label={l.rot} valor={l.val} />
+          ))}
           <Linha icon="barcode-outline" label="Nº série" valor={o.numeroSerie} />
           <Linha icon="color-palette-outline" label="Cor" valor={o.cor ?? ''} />
           <Linha icon="person-circle-outline" label="Técnico" valor={o.tecnico ?? ''} />

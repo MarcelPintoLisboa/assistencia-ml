@@ -1,3 +1,4 @@
+import { resumoFichaEnvio } from './fichas';
 import { fmtData, uid } from './format';
 import type { Cliente, DadosLoja, ModeloEtiqueta, OrdemServico, TamanhoEtiqueta } from './types';
 
@@ -34,7 +35,7 @@ export function modeloPadrao(): ModeloEtiqueta {
     opacidadeFundo: 0.15,
     titulo: 'ASSISTÊNCIA TÉCNICA',
     rodape: '',
-    mostrar: { cliente: true, telefone: true, datas: true, serie: true, acessorios: false, descricao: true, contato: false },
+    mostrar: { cliente: true, telefone: true, datas: true, serie: true, acessorios: false, descricao: true, contato: false, ficha: true },
   };
 }
 
@@ -57,8 +58,13 @@ export function conteudoEtiqueta(o: OrdemServico, c: Cliente | undefined) {
     previsao: o.previsaoEntrega ? fmtData(o.previsaoEntrega) : '',
     serie: o.numeroSerie,
     acessorios: o.acessorios,
+    /** Linhas da ficha de envio (estado, acessórios, controle, serviço) */
+    ficha: resumoFichaEnvio(o.fichaEnvio).filter((l) => l.rot !== 'Vendedor'),
   };
 }
+
+/** Modelos antigos não têm a opção "ficha": mostram por padrão. */
+export const mostraFicha = (m: ModeloEtiqueta) => m.mostrar.ficha !== false;
 
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -87,6 +93,7 @@ export function htmlEtiqueta(
       </div>
       <div class="eq">${esc(d.equipamento)}</div>
       ${d.defeitos.length ? `<div class="chips">${d.defeitos.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}
+      ${mostraFicha(m) ? d.ficha.map((l) => linha(l.rot, l.val)).join('') : ''}
       ${m.mostrar.descricao && d.descricao ? `<div class="desc">${esc(d.descricao)}</div>` : ''}
       ${m.mostrar.cliente ? linha('Cliente', d.cliente) : ''}
       ${m.mostrar.telefone ? linha('Tel', d.telefone) : ''}

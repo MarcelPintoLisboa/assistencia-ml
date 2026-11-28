@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
-import { conteudoEtiqueta, fonteBase, TAMANHOS } from '../lib/etiqueta';
+import { conteudoEtiqueta, fonteBase, mostraFicha, TAMANHOS } from '../lib/etiqueta';
 import type { Cliente, ModeloEtiqueta, OrdemServico } from '../lib/types';
 
 /** Prévia em tela da etiqueta — espelha o layout do HTML impresso. */
@@ -60,6 +60,7 @@ export function EtiquetaPreview({
             ))}
           </View>
         )}
+        {mostraFicha(m) && d.ficha.map((l) => linha(l.rot, l.val))}
         {m.mostrar.descricao && !!d.descricao && (
           <Text style={[txt, { fontStyle: 'italic' }]} numberOfLines={2}>
             {d.descricao}

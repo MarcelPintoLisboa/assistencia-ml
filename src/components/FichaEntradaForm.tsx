@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { limparObjeto, MODELOS_CONSOLE, VERSOES_CONSOLE } from '../lib/fichas';
 import type { FichaEntrada } from '../lib/types';
 import { colors } from '../theme';
 import { CampoData } from './CampoData';
-import { Campo, Card, Chips, ChipsMulti, Rotulo } from './ui';
+import { Campo, Card, ChipsMulti, Escolha, Rotulo } from './ui';
 
 type Opcao<T> = { value: T; label: string };
 
@@ -29,48 +30,18 @@ const ACOMPANHA: Opcao<NonNullable<FichaEntrada['acompanha']>[number]>[] = [
   { value: 'cabos', label: 'Cabos' },
   { value: 'jogos', label: 'Jogos' },
 ];
-const MODELOS: Opcao<NonNullable<FichaEntrada['modelo']>>[] = [
-  { value: 'xbox360', label: 'Xbox 360' },
-  { value: 'xboxone', label: 'Xbox One' },
-  { value: 'xboxs', label: 'Xbox Series S' },
-  { value: 'ps2', label: 'PS2' },
-  { value: 'ps3', label: 'PS3' },
-  { value: 'ps4', label: 'PS4' },
-  { value: 'ps5', label: 'PS5' },
-];
-const VERSOES: Opcao<NonNullable<FichaEntrada['versao']>>[] = [
-  { value: 'fat', label: 'Fat' },
-  { value: 'slim', label: 'Slim' },
-];
-const SIM_NAO: Opcao<'sim' | 'nao'>[] = [
+const MODELOS = MODELOS_CONSOLE;
+const VERSOES = VERSOES_CONSOLE;
+export const SIM_NAO: Opcao<'sim' | 'nao'>[] = [
   { value: 'sim', label: 'Sim' },
   { value: 'nao', label: 'Não' },
 ];
 
 /** Tira campos vazios; devolve null se não sobrou nada preenchido. */
-export function limparFicha(f: FichaEntrada): FichaEntrada | null {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(f)) {
-    if (v === undefined || v === null) continue;
-    if (typeof v === 'string' && !v.trim()) continue;
-    if (Array.isArray(v) && v.length === 0) continue;
-    out[k] = typeof v === 'string' ? v.trim() : v;
-  }
-  return Object.keys(out).length ? (out as FichaEntrada) : null;
-}
+export const limparFicha = (f: FichaEntrada) => limparObjeto(f);
 
-/** Escolha única que pode ser desmarcada tocando de novo (nada é obrigatório). */
-function Escolha<T extends string>({ rotulo, opcoes, valor, onChange }: { rotulo: string; opcoes: Opcao<T>[]; valor: T | undefined; onChange: (v: T | undefined) => void }) {
-  return (
-    <>
-      <Rotulo>{rotulo}</Rotulo>
-      <Chips opcoes={opcoes} valor={(valor ?? '') as T} onChange={(v) => onChange(v === valor ? undefined : v)} />
-    </>
-  );
-}
-
-const simNao = (b: boolean | undefined) => (b === undefined ? undefined : b ? 'sim' : 'nao');
-const deSimNao = (v: 'sim' | 'nao' | undefined) => (v === undefined ? undefined : v === 'sim');
+export const simNao = (b: boolean | undefined) => (b === undefined ? undefined : b ? 'sim' : 'nao');
+export const deSimNao = (v: 'sim' | 'nao' | undefined) => (v === undefined ? undefined : v === 'sim');
 
 export function FichaEntradaForm({ ficha, onChange, abertaInicial }: { ficha: FichaEntrada; onChange: (f: FichaEntrada) => void; abertaInicial: boolean }) {
   const [aberta, setAberta] = useState(abertaInicial);

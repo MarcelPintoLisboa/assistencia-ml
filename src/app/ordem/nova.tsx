@@ -3,12 +3,14 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CampoData } from '../../components/CampoData';
+import { FichaEnvioForm } from '../../components/FichaEnvioForm';
 import { Botao, Campo, Card, Chips, Rotulo, s as ui, Titulo } from '../../components/ui';
 import {
-  defeitosSugeridos, exemplosEquipamento, fmtMoeda, parseMoeda, PRIORIDADE, procedimentosSugeridos, STATUS, STATUS_ORDEM, TIPOS_EQUIPAMENTO, uid,
+  defeitosSugeridos, ehDrone, exemplosEquipamento, fmtMoeda, parseMoeda, PRIORIDADE, procedimentosSugeridos, STATUS, STATUS_ORDEM, TIPOS_EQUIPAMENTO, uid,
 } from '../../lib/format';
+import { faltaNaFicha, limparObjeto } from '../../lib/fichas';
 import { useDados } from '../../lib/store';
-import type { ItemOrcamento, Prioridade, Procedimento, StatusOS } from '../../lib/types';
+import type { FichaEnvio, ItemOrcamento, Prioridade, Procedimento, StatusOS } from '../../lib/types';
 import { colors, radius } from '../../theme';
 
 export default function NovaOrdem() {
@@ -21,6 +23,9 @@ export default function NovaOrdem() {
   const [novoCliente, setNovoCliente] = useState(clientes.length === 0);
   const [nomeNovo, setNomeNovo] = useState('');
   const [telNovo, setTelNovo] = useState('');
+  const [endNovo, setEndNovo] = useState('');
+  const [docNovo, setDocNovo] = useState('');
+  const [fichaEnvio, setFichaEnvio] = useState<FichaEnvio>(atual?.fichaEnvio ?? {});
 
   const [tipo, setTipo] = useState(atual?.tipoEquipamento ?? 'Drone');
   const ex = exemplosEquipamento(tipo);
@@ -69,16 +74,25 @@ export default function NovaOrdem() {
   const erro = (msg: string) => (Platform.OS === 'web' ? globalThis.alert?.(msg) : Alert.alert('Atenção', msg));
 
   const salvar = async () => {
-    let cid = clienteId;
-    if (novoCliente) {
-      if (!nomeNovo.trim()) return erro('Informe o nome do cliente.');
-      const c = await salvarCliente({ nome: nomeNovo.trim(), telefone: telNovo.trim(), email: '', endereco: '', notas: '' });
-      cid = c.id;
-    }
-    if (!cid) return erro('Selecione o cliente.');
+    // valida tudo antes de cadastrar o cliente novo, para não criar cliente sem OS
+    if (novoCliente && !nomeNovo.trim()) return erro('Informe o nome do cliente.');
+    if (!novoCliente && !clienteId) return erro('Selecione o cliente.');
     if (!marca.trim() && !modelo.trim()) return erro('Informe a marca ou o modelo do equipamento.');
     if (!defeito.trim() && !defeitos.length) return erro('Marque ou descreva o defeito.');
+    // a ficha de envio é obrigatória nas OS novas (as antigas podem ser editadas sem ela)
+    const falta = atual ? '' : faltaNaFicha(fichaEnvio);
+    if (falta) return erro(falta);
+    let cid = clienteId;
+    if (novoCliente) {
+      const c = await salvarCliente({
+        nome: nomeNovo.trim(), telefone: telNovo.trim(), email: '', endereco: endNovo.trim(),
+        documento: docNovo.trim() || undefined, notas: '',
+      });
+      cid = c.id;
+    }
+    const fichaFinal = limparObjeto(fichaEnvio) ?? (atual?.fichaEnvio ? null : undefined);
     const o = await salvarOrdem({
+      ...(fichaFinal !== undefined ? { fichaEnvio: fichaFinal } : {}),
       id: atual?.id,
       clienteId: cid,
       tipoEquipamento: tipo,
@@ -120,6 +134,8 @@ export default function NovaOrdem() {
             <>
               <Campo label="Nome *" value={nomeNovo} onChangeText={setNomeNovo} placeholder="Nome do cliente" />
               <Campo label="Telefone / WhatsApp" value={telNovo} onChangeText={setTelNovo} keyboardType="phone-pad" placeholder="(00) 00000-0000" />
+              <Campo label="Endereço" value={endNovo} onChangeText={setEndNovo} />
+              <Campo label="RG ou CPF" value={docNovo} onChangeText={setDocNovo} keyboardType="numbers-and-punctuation" />
               {clientes.length > 0 && (
                 <Pressable onPress={() => setNovoCliente(false)}>
                   <Text style={st.link}>Escolher cliente existente</Text>
@@ -202,6 +218,9 @@ export default function NovaOrdem() {
           <Campo label="Relato do cliente / estado do aparelho" value={defeito} onChangeText={setDefeito} multiline placeholder="O que o cliente relatou, riscos, marcas de uso…" />
           <Campo label="Diagnóstico técnico" value={diagnostico} onChangeText={setDiagnostico} multiline placeholder="Preenchido após avaliação" />
         </Card>
+
+        <Titulo>Ficha de envio para assistência</Titulo>
+        <FichaEnvioForm ficha={fichaEnvio} onChange={setFichaEnvio} drone={ehDrone(tipo)} cor={cor} onCor={setCor} />
 
         <Titulo>Andamento</Titulo>
         <Card>

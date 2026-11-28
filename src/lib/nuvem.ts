@@ -36,6 +36,8 @@ const ordemDb = (o: OrdemServico): Linha => ({
   data_entrada: o.dataEntrada, previsao_entrega: o.previsaoEntrega || null, data_saida: o.dataSaida || null,
   garantia_dias: Math.max(0, Math.round(num(o.garantiaDias))), procedimentos: o.procedimentos ?? [],
   historico: o.historico ?? [],
+  // só envia quando existe (coluna criada pelo script 20261128_fichas.sql)
+  ...(o.fichaEnvio !== undefined ? { ficha: o.fichaEnvio } : {}),
 });
 const ordemApp = (r: Linha): OrdemServico => ({
   id: r.id as string, numero: r.numero as number, clienteId: (r.cliente_id as string) ?? '',
@@ -48,6 +50,7 @@ const ordemApp = (r: Linha): OrdemServico => ({
   previsaoEntrega: (r.previsao_entrega as string) ?? null, dataSaida: (r.data_saida as string) ?? null,
   garantiaDias: r.garantia_dias as number, procedimentos: (r.procedimentos as OrdemServico['procedimentos']) ?? [],
   historico: (r.historico as OrdemServico['historico']) ?? [],
+  fichaEnvio: r.ficha === undefined ? undefined : ((r.ficha as OrdemServico['fichaEnvio']) ?? null),
 });
 
 const agendamentoDb = (a: Agendamento): Linha => ({
@@ -66,8 +69,10 @@ const produtoDb = (p: Produto): Linha => ({
   usado: !!p.usado, ativo: p.ativo !== false, criado_em: p.criadoEm,
   // só envia quando o campo existe (a coluna vem do script de equipe/exclusão lógica)
   ...(p.excluido !== undefined ? { excluido: !!p.excluido, excluido_em: p.excluidoEm ?? null } : {}),
-  // idem para a ficha de entrada (coluna criada pelo script 20261128_ficha_produto.sql)
+  // idem para a ficha de entrada (coluna criada pelo script 20261128_fichas.sql)
   ...(p.ficha !== undefined ? { ficha: p.ficha } : {}),
+  ...(p.modelo !== undefined ? { modelo: p.modelo } : {}),
+  ...(p.foto !== undefined ? { foto: p.foto } : {}),
 });
 const produtoApp = (r: Linha): Produto => ({
   id: r.id as string, nome: r.nome as string, categoria: r.categoria as Produto['categoria'], marca: r.marca as string,
@@ -75,6 +80,8 @@ const produtoApp = (r: Linha): Produto => ({
   estoqueMinimo: r.estoque_minimo as number, usado: r.usado as boolean, ativo: r.ativo as boolean, criadoEm: r.criado_em as string,
   excluido: r.excluido === undefined ? undefined : !!r.excluido, excluidoEm: (r.excluido_em as string) ?? null,
   ficha: r.ficha === undefined ? undefined : ((r.ficha as Produto['ficha']) ?? null),
+  modelo: r.modelo === undefined ? undefined : ((r.modelo as string) ?? ''),
+  foto: r.foto === undefined ? undefined : ((r.foto as string) ?? null),
 });
 
 const vendaDb = (v: Venda): Linha => ({
@@ -137,9 +144,30 @@ async function lerTabela(tabela: string, ordem: string, asc = false): Promise<Li
   return todos;
 }
 
+// Colunas novas que podem ainda não existir (script 20261128_fichas.sql não rodado).
+// Se o banco reclamar de uma delas, grava o resto sem ela; o dado fica só no aparelho até rodar o script.
+const COLUNAS_NOVAS = ['ficha', 'foto', 'modelo'];
+const colunasAusentes = new Map<string, Set<string>>();
+const colunaAusente = (e: { code?: string; message?: string }) => {
+  const m = e.code === 'PGRST204' ? /'(\w+)' column/.exec(e.message ?? '') : null;
+  return m && COLUNAS_NOVAS.includes(m[1]) ? m[1] : null;
+};
+
 async function enviar(tabela: string, linhas: Linha[]) {
+  const ausentes = colunasAusentes.get(tabela) ?? new Set<string>();
+  colunasAusentes.set(tabela, ausentes);
   for (const parte of pedacos(linhas, 300)) {
-    const { error } = await supabase.from(tabela).upsert(donoAtual ? parte.map((l) => ({ ...l, owner_id: donoAtual })) : parte);
+    const montar = () =>
+      parte.map((l) => {
+        const linha = Object.fromEntries(Object.entries(l).filter(([k]) => !ausentes.has(k)));
+        return donoAtual ? { ...linha, owner_id: donoAtual } : linha;
+      });
+    let { error } = await supabase.from(tabela).upsert(montar());
+    for (let col = error && colunaAusente(error); col && !ausentes.has(col); col = error && colunaAusente(error)) {
+      console.warn(`[nuvem] ${tabela} sem a coluna "${col}" — rode supabase/migrations/20261128_fichas.sql`);
+      ausentes.add(col);
+      ({ error } = await supabase.from(tabela).upsert(montar()));
+    }
     if (error) throw error;
   }
 }

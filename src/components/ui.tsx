@@ -157,6 +157,26 @@ export function Chips<T extends string | number>({
   );
 }
 
+/** Rótulo + escolha única que pode ser desmarcada tocando de novo. */
+export function Escolha<T extends string>({
+  rotulo,
+  opcoes,
+  valor,
+  onChange,
+}: {
+  rotulo: string;
+  opcoes: { value: T; label: string; color?: string }[];
+  valor: T | undefined;
+  onChange: (v: T | undefined) => void;
+}) {
+  return (
+    <>
+      <Rotulo>{rotulo}</Rotulo>
+      <Chips opcoes={opcoes} valor={(valor ?? '') as T} onChange={(v) => onChange(v === valor ? undefined : v)} />
+    </>
+  );
+}
+
 /** Como Chips, mas permite marcar várias opções (ou nenhuma). */
 export function ChipsMulti<T extends string>({
   opcoes,

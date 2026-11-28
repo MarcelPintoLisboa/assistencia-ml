@@ -7,6 +7,7 @@ import * as Linking from 'expo-linking';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { celularFormatado, CONTATO, LINKS } from '../../lib/contato';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { OpcaoBiometria } from '../../components/OpcaoBiometria';
 import { Botao, Card, Titulo } from '../../components/ui';
 import { prepararNotificacoes } from '../../lib/notifications';
 import { useConta } from '../../lib/conta';
@@ -137,6 +138,8 @@ export default function Ajustes() {
           }}
         />
       </Card>
+
+      <OpcaoBiometria />
 
       <Titulo>Conta</Titulo>
       <Card style={{ gap: 10 }}>

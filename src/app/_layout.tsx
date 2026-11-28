@@ -11,6 +11,7 @@ import { useDesktop } from '../lib/desktop';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EstadoConta } from '../components/EstadoConta';
 import { TrocarSenha } from '../components/TrocarSenha';
+import { TravaBiometria } from '../components/TravaBiometria';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { ContaProvider, useConta } from '../lib/conta';
 import { prepararNotificacoes } from '../lib/notifications';
@@ -67,9 +68,11 @@ function Portao() {
   if (!pronto) return <Centro><ActivityIndicator color={colors.primary} size="large" /></Centro>;
   if (!user) return <Login />;
   return (
-    <ContaProvider key={user.id}>
-      <PortaoConta />
-    </ContaProvider>
+    <TravaBiometria key={user.id}>
+      <ContaProvider key={user.id}>
+        <PortaoConta />
+      </ContaProvider>
+    </TravaBiometria>
   );
 }
 
@@ -139,6 +142,7 @@ function Carregamento() {
           <Stack.Screen name="venda/nova" options={{ title: 'Nova venda', presentation: 'modal' }} />
           <Stack.Screen name="venda/[id]" options={{ title: 'Venda' }} />
           <Stack.Screen name="produtos/editar" options={{ title: 'Produto', presentation: 'modal' }} />
+          <Stack.Screen name="produtos/story" options={{ title: 'Story do Instagram' }} />
           <Stack.Screen name="admin" options={{ title: 'Painel do administrador' }} />
           <Stack.Screen name="etiqueta/[id]" options={{ title: 'Etiqueta' }} />
           <Stack.Screen name="etiquetas/index" options={{ title: 'Modelos de etiqueta' }} />

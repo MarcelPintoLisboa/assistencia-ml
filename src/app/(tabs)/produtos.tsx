@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -22,14 +23,17 @@ export default function Produtos() {
   const baixos = produtos.filter((p) => p.ativo && p.estoque <= p.estoqueMinimo).length;
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todos');
+  const [condicao, setCondicao] = useState<'todas' | 'novo' | 'usado'>('todas');
+  const novos = produtos.filter((p) => !p.usado).length;
 
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return produtos
       .filter((p) => (filtro === 'todos' ? true : filtro === 'baixo' ? p.estoque <= p.estoqueMinimo : p.categoria === filtro))
-      .filter((p) => !q || `${p.nome} ${p.marca} ${p.sku}`.toLowerCase().includes(q))
+      .filter((p) => condicao === 'todas' || (condicao === 'usado' ? p.usado : !p.usado))
+      .filter((p) => !q || `${p.nome} ${p.marca} ${p.modelo ?? ''} ${p.sku}`.toLowerCase().includes(q))
       .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [produtos, busca, filtro]);
+  }, [produtos, busca, filtro, condicao]);
 
   return (
     <View style={{ flex: 1, paddingTop: desktop ? 24 : insets.top + 12 }}>
@@ -51,6 +55,17 @@ export default function Produtos() {
           onChange={setFiltro}
         />
       </ScrollView>
+      <View style={g.conteudo}>
+        <Chips<'todas' | 'novo' | 'usado'>
+          opcoes={[
+            { value: 'todas', label: 'Novos e usados' },
+            { value: 'novo', label: `Novos (${novos})`, color: colors.good },
+            { value: 'usado', label: `Usados (${produtos.length - novos})`, color: colors.seriesOut },
+          ]}
+          valor={condicao}
+          onChange={setCondicao}
+        />
+      </View>
       <FlatList
         {...g.lista}
         data={lista}
@@ -66,7 +81,11 @@ export default function Produtos() {
               style={({ pressed }) => [st.item, pressed && { opacity: 0.75 }, !p.ativo && { opacity: 0.5 }]}
             >
               <View style={st.icone}>
-                <Ionicons name={CATEGORIA[p.categoria].icon} size={20} color={colors.primary} />
+                {p.foto ? (
+                  <Image source={{ uri: p.foto }} style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff' }} contentFit="cover" />
+                ) : (
+                  <Ionicons name={CATEGORIA[p.categoria].icon} size={20} color={colors.primary} />
+                )}
               </View>
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={st.nome} numberOfLines={1}>
@@ -79,6 +98,14 @@ export default function Produtos() {
                 </View>
               </View>
               <Text style={st.preco}>{fmtMoeda(p.preco)}</Text>
+              <Pressable
+                hitSlop={10}
+                onPress={() => router.push({ pathname: '/produtos/story', params: { id: p.id } })}
+                accessibilityLabel="Story do Instagram"
+                style={({ pressed }) => [{ padding: 4 }, pressed && { opacity: 0.6 }]}
+              >
+                <Ionicons name="logo-instagram" size={20} color={colors.primary} />
+              </Pressable>
             </Pressable>
             </View>
           );
@@ -106,7 +133,7 @@ const st = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  icone: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center' },
+  icone: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   nome: { color: colors.text, fontWeight: '700', fontSize: 15 },
   preco: { color: colors.text, fontWeight: '800' },
 });
