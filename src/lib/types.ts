@@ -98,6 +98,33 @@ export interface Produto {
   /** Exclusão lógica: some das listas e das vendas, mas o histórico continua apontando para ele */
   excluido?: boolean;
   excluidoEm?: string | null;
+  /** Ficha técnica de entrada (tudo opcional). null = sem ficha; undefined = coluna ainda não existe na nuvem */
+  ficha?: FichaEntrada | null;
+}
+
+/** Campos da "Ficha técnica de entrada" em papel. Nenhum é obrigatório. */
+export interface FichaEntrada {
+  tipo?: 'manutencao' | 'venda' | 'compra' | 'troca';
+  /** Data de entrada (ISO) */
+  data?: string;
+  os?: string;
+  tecnico?: string;
+  exProprietario?: string;
+  endereco?: string;
+  documento?: string;
+  telefone?: string;
+  numeroSerie?: string;
+  defeito?: boolean;
+  origem?: 'facebook' | 'olx' | 'outros';
+  cor?: 'branco' | 'preto' | 'especial';
+  acompanha?: ('controle' | 'cabos' | 'jogos')[];
+  liga?: boolean;
+  modelo?: 'xbox360' | 'xboxone' | 'xboxs' | 'ps2' | 'ps3' | 'ps4' | 'ps5';
+  versao?: 'fat' | 'slim';
+  estado?: string;
+  servico?: string;
+  final?: string;
+  observacoes?: string;
 }
 
 /** Usuário da loja (tabela assistencia_usuarios) */

@@ -1,10 +1,11 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, Text, View } from 'react-native';
+import { FichaEntradaForm, limparFicha } from '../../components/FichaEntradaForm';
 import { Botao, Campo, Card, Chips, Rotulo } from '../../components/ui';
 import { CATEGORIA, fmtMoeda, parseMoeda } from '../../lib/format';
 import { useDados } from '../../lib/store';
-import type { CategoriaProduto } from '../../lib/types';
+import type { CategoriaProduto, FichaEntrada } from '../../lib/types';
 import { colors } from '../../theme';
 
 const valorTxt = (n: number | undefined) => (n ? fmtMoeda(n).replace('R$ ', '') : '');
@@ -24,6 +25,7 @@ export default function EditarProduto() {
   const [minimo, setMinimo] = useState(String(p?.estoqueMinimo ?? 1));
   const [usado, setUsado] = useState(p?.usado ?? false);
   const [ativo, setAtivo] = useState(p?.ativo ?? true);
+  const [ficha, setFicha] = useState<FichaEntrada>(p?.ficha ?? {});
 
   // Usuário comum pode cadastrar, mas o custo só aparece/edita para o admin.
   const podeVerCusto = ehAdmin || !p;
@@ -32,7 +34,10 @@ export default function EditarProduto() {
 
   const salvar = async () => {
     if (!nome.trim()) return Alert.alert('Atenção', 'Informe o nome do produto.');
+    // ficha vazia: não envia nada (ou limpa, se o produto já tinha uma)
+    const fichaFinal = limparFicha(ficha) ?? (p?.ficha ? null : undefined);
     await salvarProduto({
+      ...(fichaFinal !== undefined ? { ficha: fichaFinal } : {}),
       id: p?.id,
       nome: nome.trim(),
       categoria,
@@ -85,6 +90,18 @@ export default function EditarProduto() {
             valor={categoria}
             onChange={setCategoria}
           />
+          <Rotulo>Condição</Rotulo>
+          <Chips
+            opcoes={[
+              { value: 'novo', label: 'Novo', color: colors.good },
+              { value: 'usado', label: 'Usado / seminovo', color: colors.seriesOut },
+            ]}
+            valor={usado ? 'usado' : 'novo'}
+            onChange={(v) => setUsado(v === 'usado')}
+          />
+          <Text style={{ color: colors.textSec, fontSize: 12, marginTop: -4, marginBottom: 12 }}>
+            {usado ? 'Garantia de 90 dias na venda.' : 'Produto novo, na garantia padrão.'}
+          </Text>
           <Campo label="Nome *" value={nome} onChangeText={setNome} placeholder="Ex.: DJI Mini 4 Pro Fly More" />
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}>
@@ -117,9 +134,9 @@ export default function EditarProduto() {
               <Campo label="Avisar abaixo de" value={minimo} onChangeText={setMinimo} keyboardType="number-pad" />
             </View>
           </View>
-          {toggle('Seminovo / usado (garantia 90 dias)', usado, setUsado)}
           {toggle('Disponível para venda', ativo, setAtivo)}
         </Card>
+        <FichaEntradaForm ficha={ficha} onChange={setFicha} abertaInicial={!!p?.ficha} />
         <Botao label="Salvar produto" icon="checkmark" onPress={salvar} style={{ marginTop: 20 }} />
         {p && ehAdmin && <Botao label="Excluir produto" variante="perigo" icon="trash-outline" onPress={excluir} style={{ marginTop: 10 }} />}
       </ScrollView>

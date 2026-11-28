@@ -66,12 +66,15 @@ const produtoDb = (p: Produto): Linha => ({
   usado: !!p.usado, ativo: p.ativo !== false, criado_em: p.criadoEm,
   // só envia quando o campo existe (a coluna vem do script de equipe/exclusão lógica)
   ...(p.excluido !== undefined ? { excluido: !!p.excluido, excluido_em: p.excluidoEm ?? null } : {}),
+  // idem para a ficha de entrada (coluna criada pelo script 20261128_ficha_produto.sql)
+  ...(p.ficha !== undefined ? { ficha: p.ficha } : {}),
 });
 const produtoApp = (r: Linha): Produto => ({
   id: r.id as string, nome: r.nome as string, categoria: r.categoria as Produto['categoria'], marca: r.marca as string,
   sku: r.sku as string, custo: num(r.custo), preco: num(r.preco), estoque: r.estoque as number,
   estoqueMinimo: r.estoque_minimo as number, usado: r.usado as boolean, ativo: r.ativo as boolean, criadoEm: r.criado_em as string,
   excluido: r.excluido === undefined ? undefined : !!r.excluido, excluidoEm: (r.excluido_em as string) ?? null,
+  ficha: r.ficha === undefined ? undefined : ((r.ficha as Produto['ficha']) ?? null),
 });
 
 const vendaDb = (v: Venda): Linha => ({

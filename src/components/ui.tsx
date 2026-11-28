@@ -157,6 +157,39 @@ export function Chips<T extends string | number>({
   );
 }
 
+/** Como Chips, mas permite marcar várias opções (ou nenhuma). */
+export function ChipsMulti<T extends string>({
+  opcoes,
+  valores,
+  onChange,
+}: {
+  opcoes: { value: T; label: string; color?: string }[];
+  valores: T[];
+  onChange: (v: T[]) => void;
+}) {
+  return (
+    <View style={s.chips}>
+      {opcoes.map((o) => {
+        const ativo = valores.includes(o.value);
+        const cor = o.color ?? colors.primary;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => {
+              toque();
+              onChange(ativo ? valores.filter((v) => v !== o.value) : [...valores, o.value]);
+            }}
+            style={[s.chip, ativo && { backgroundColor: cor + '26', borderColor: cor }]}
+          >
+            {ativo && <Ionicons name="checkmark" size={14} color={cor} />}
+            <Text style={[s.chipTxt, ativo && { color: colors.text }]}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function Badge({ label, color, icon }: { label: string; color: string; icon?: IconName }) {
   return (
     <View style={[s.badge, { backgroundColor: color + '22', borderColor: color + '66' }]}>
@@ -285,6 +318,9 @@ export const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bgAlt,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   chipTxt: { color: colors.textSec, fontSize: 13, fontWeight: '600' },
   badge: {

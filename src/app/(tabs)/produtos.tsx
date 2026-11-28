@@ -74,7 +74,7 @@ export default function Produtos() {
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                   <Badge label={p.estoque <= 0 ? 'Sem estoque' : `${p.estoque} un.`} color={p.estoque <= 0 ? colors.critical : baixo ? colors.warning : colors.primary} icon={baixo ? 'alert-circle' : 'cube-outline'} />
-                  {p.usado && <Badge label="Seminovo" color={colors.textMuted} />}
+                  {p.usado ? <Badge label="Usado" color={colors.seriesOut} icon="refresh-outline" /> : <Badge label="Novo" color={colors.good} icon="sparkles-outline" />}
                   {ehAdmin && <Text style={{ color: colors.textSec, fontSize: 12 }}>Custo {fmtMoeda(p.custo)} · margem {margem}%</Text>}
                 </View>
               </View>

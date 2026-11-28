@@ -110,7 +110,7 @@ export default function NovaVenda() {
                   </Text>
                   <Text style={{ color: p.estoque <= 0 ? colors.critical : colors.textSec, fontSize: 12 }}>
                     {p.estoque <= 0 ? 'Sem estoque · toque para adicionar' : `${p.estoque} em estoque`}
-                    {p.usado ? ' · seminovo' : ''}
+                    {p.usado ? ' · usado' : ' · novo'}
                   </Text>
                 </View>
                 <Text style={{ color: colors.text, fontWeight: '800' }}>{fmtMoeda(p.preco)}</Text>
